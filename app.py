@@ -7,11 +7,8 @@ from datetime import datetime, timedelta
 from functools import wraps
 
 try:
-    try:
     import psycopg2
     import psycopg2.extras
-except Exception:
-    psycopg2 = None
 except Exception:
     psycopg2 = None
 
@@ -38,7 +35,11 @@ SQLITE_DB = os.path.join(DB_DIR, "licenses.db")
 
 
 def using_postgres():
-    return bool(DATABASE_URL and DATABASE_URL.startswith(("postgresql://", "postgres://")) and psycopg2 is not None)
+    return bool(
+        DATABASE_URL and
+        DATABASE_URL.startswith(("postgresql://", "postgres://")) and
+        psycopg2 is not None
+    )
 
 
 def now_utc():
@@ -47,7 +48,15 @@ def now_utc():
 
 def get_conn():
     if using_postgres():
-        return psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+        try:
+            return psycopg2.connect(
+                DATABASE_URL,
+                cursor_factory=psycopg2.extras.RealDictCursor,
+                sslmode="require"
+            )
+        except Exception as e:
+            print("Postgres failed, fallback SQLite:", e)
+
     con = sqlite3.connect(SQLITE_DB)
     con.row_factory = sqlite3.Row
     return con
@@ -85,7 +94,7 @@ def init_db():
 
 
 def sql_params(query):
-    return query.replace("?", "%s") if using_postgres() else query if using_postgres() else query
+    return query.replace("?", "%s") if using_postgres() else query
 
 
 def db_query(query, args=(), fetchone=False, fetchall=False):
@@ -840,7 +849,22 @@ tr{transition:background .16s ease}
 tr:hover td{background:rgba(255,36,52,.045)}
 code{color:var(--red);font-weight:950;letter-spacing:.2px}
 .hwid{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c7c7cf}
-.owner{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#f5f5f7;font-weight:850}
+.owner{
+  min-width:230px;
+  width:230px;
+  color:#f5f5f7;
+  font-weight:850;
+  font-family:Consolas,monospace;
+  white-space:nowrap;
+  overflow:visible;
+  text-overflow:clip;
+  cursor:pointer;
+  transition:.18s ease;
+}
+.owner:hover{
+  color:#ff2434;
+  text-shadow:0 0 18px rgba(255,36,52,.35);
+}
 .check{width:19px;height:19px;accent-color:var(--red);min-width:0}
 .pill{display:inline-block;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:950;background:#17171b;border:1px solid rgba(255,255,255,.12)}
 .ok{color:#9effb7}.warn{color:#ffe08a}.bad{color:#ff9b9b}
