@@ -524,6 +524,8 @@ ADMIN_HTML = """
             border-radius: 14px;
             padding: 12px;
             min-height: 42px;
+            max-height: 180px;
+            overflow: auto;
             color: #f5f5f7;
         }
     </style>
@@ -580,14 +582,29 @@ ADMIN_HTML = """
 <script>
 const secret = new URLSearchParams(window.location.search).get("secret") || "";
 
-async function postJSON(url, payload) {
+async function postJSON(url, payload, showResult = true) {
     const res = await fetch(url, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({...payload, secret})
     });
     const data = await res.json();
-    document.getElementById("result").innerText = JSON.stringify(data, null, 2);
+
+    if (showResult) {
+        let output = data;
+
+        // Avoid making the Result box huge when many keys exist.
+        if (url === "/admin/list" && data.ok) {
+            output = {
+                ok: true,
+                count: data.count,
+                message: "Key list refreshed below."
+            };
+        }
+
+        document.getElementById("result").innerText = JSON.stringify(output, null, 2);
+    }
+
     return data;
 }
 
