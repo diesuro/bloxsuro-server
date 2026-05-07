@@ -32,6 +32,8 @@ ADMIN_USERS = {u: p for u, p in ADMIN_USERS.items() if u and p}
 DB_DIR = os.environ.get("DB_DIR", ".")
 os.makedirs(DB_DIR, exist_ok=True)
 SQLITE_DB = os.path.join(DB_DIR, "licenses.db")
+DB_INITIALIZED = False
+DB_MODE = None
 
 
 def using_postgres():
@@ -52,19 +54,27 @@ def get_conn():
             return psycopg2.connect(
                 DATABASE_URL,
                 cursor_factory=psycopg2.extras.RealDictCursor,
-                sslmode="require"
+                sslmode="require",
+                connect_timeout=6
             )
         except Exception as e:
-            print("Postgres failed, fallback SQLite:", e)
+            print("Postgres failed, fallback SQLite:", e, flush=True)
 
-    con = sqlite3.connect(SQLITE_DB)
+    con = sqlite3.connect(SQLITE_DB, timeout=10)
     con.row_factory = sqlite3.Row
     return con
 
 
 def init_db():
+    global DB_INITIALIZED, DB_MODE
+
+    current_mode = "postgres" if using_postgres() else "sqlite"
+    if DB_INITIALIZED and DB_MODE == current_mode:
+        return
+
     con = get_conn()
     cur = con.cursor()
+
     cur.execute("""
     CREATE TABLE IF NOT EXISTS licenses (
         license_key TEXT PRIMARY KEY,
@@ -75,8 +85,9 @@ def init_db():
         updated_at TEXT
     )
     """)
+
     if using_postgres():
-        cur.execute("ALTER TABLE licenses ADD COLUMN IF NOT EXISTS owner TEXT")
+        cur.execute("ALTER TABLE licenses ADD COLUMN IF NOT EXISTS owner TEXT DEFAULT ''")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_hwid ON licenses(hwid)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_owner ON licenses(owner)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_active ON licenses(active)")
@@ -89,8 +100,12 @@ def init_db():
                 cur.execute("ALTER TABLE licenses ADD COLUMN owner TEXT")
         except Exception:
             pass
+
     con.commit()
     con.close()
+
+    DB_INITIALIZED = True
+    DB_MODE = current_mode
 
 
 def sql_params(query):
@@ -101,22 +116,25 @@ def db_query(query, args=(), fetchone=False, fetchall=False):
     init_db()
     con = get_conn()
     cur = con.cursor()
-    cur.execute(sql_params(query), args)
 
-    result = None
-    if fetchone:
-        result = cur.fetchone()
-    elif fetchall:
-        result = cur.fetchall()
+    try:
+        cur.execute(sql_params(query), args)
 
-    con.commit()
-    con.close()
+        result = None
+        if fetchone:
+            result = cur.fetchone()
+        elif fetchall:
+            result = cur.fetchall()
 
-    if result is None:
-        return None
-    if fetchone:
-        return dict(result)
-    return [dict(r) for r in result]
+        con.commit()
+
+        if result is None:
+            return None
+        if fetchone:
+            return dict(result)
+        return [dict(r) for r in result]
+    finally:
+        con.close()
 
 
 def parse_duration(duration: str):
@@ -827,7 +845,7 @@ h3{margin:0 0 14px;font-size:21px}
   background:rgba(7,7,8,.82);
   box-shadow:inset 0 0 42px rgba(0,0,0,.22);
 }
-table{width:100%;border-collapse:collapse;min-width:1040px;table-layout:fixed}
+table{width:100%;border-collapse:collapse;min-width:1180px;table-layout:auto}
 th,td{
   text-align:left;
   padding:15px 14px;
