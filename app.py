@@ -377,30 +377,29 @@ LOGIN_HTML = """
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         :root {
-            --red: #111111;
-            --red2: #333333;
-            --bg: #f4f4f4;
-            --surface: rgba(255,255,255,.86);
-            --card: rgba(255,255,255,.92);
-            --card2: rgba(250,250,250,.96);
-            --border: rgba(0,0,0,.14);
-            --text: #111111;
-            --muted: #555555;
-            --glow: rgba(0,0,0,.10);
+            --accent: #ffffff;
+            --bg: #030304;
+            --surface: rgba(11,11,14,.86);
+            --card: rgba(18,18,22,.88);
+            --card2: rgba(9,9,12,.94);
+            --border: rgba(255,255,255,.12);
+            --text: #f5f5f7;
+            --muted: #aaaab4;
         }
 
         * { box-sizing: border-box; }
 
-        html {
-            scroll-behavior: smooth;
-        }
+        html { scroll-behavior: smooth; }
 
         body {
             min-height: 100vh;
             margin: 0;
             color: var(--text);
             font-family: Segoe UI, Arial, sans-serif;
-            background: linear-gradient(180deg, #ffffff 0%, #f4f4f4 100%);
+            background:
+                radial-gradient(circle at var(--mx, 20%) var(--my, 10%), rgba(255,255,255,.105), transparent 28%),
+                radial-gradient(circle at 88% 5%, rgba(255,255,255,.055), transparent 24%),
+                linear-gradient(135deg, #060607 0%, #111116 45%, #020203 100%);
             background-attachment: fixed;
             overflow-x: hidden;
         }
@@ -408,36 +407,28 @@ LOGIN_HTML = """
         body::before {
             content: "";
             position: fixed;
-            inset: -20%;
+            inset: -30%;
             background:
-                linear-gradient(115deg, transparent 0%, rgba(255,255,255,.035) 48%, transparent 52%),
-                radial-gradient(circle at 20% 25%, rgba(0,0,0,.08), transparent 32%);
+                linear-gradient(115deg, transparent 0%, rgba(255,255,255,.045) 48%, transparent 54%),
+                radial-gradient(circle at 55% 42%, rgba(255,255,255,.035), transparent 34%);
             transform: translate3d(calc(var(--px, 0) * 1px), calc(var(--py, 0) * 1px), 0);
             pointer-events: none;
             opacity: .85;
             z-index: -1;
         }
 
-        *::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
-        }
-
-        *::-webkit-scrollbar-track {
-            background: rgba(255,255,255,.035);
-            border-radius: 4px;
-        }
-
+        *::-webkit-scrollbar { width: 10px; height: 10px; }
+        *::-webkit-scrollbar-track { background: rgba(255,255,255,.035); border-radius: 999px; }
         *::-webkit-scrollbar-thumb {
-            background: rgba(0,0,0,.42);
-            border-radius: 4px;
+            background: rgba(255,255,255,.28);
+            border-radius: 999px;
             border: 2px solid rgba(0,0,0,.25);
         }
 
         .wrap {
             width: min(1280px, calc(100vw - 56px));
             margin: 0 auto;
-            padding: 56px 0 72px;
+            padding: 54px 0 72px;
         }
 
         .topbar {
@@ -454,20 +445,39 @@ LOGIN_HTML = """
             to { opacity: 1; transform: translateY(0); }
         }
 
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand img {
+            width: 62px;
+            height: 62px;
+            object-fit: contain;
+            filter: drop-shadow(0 18px 24px rgba(0,0,0,.40));
+            animation: logoFloat 3.4s ease-in-out infinite alternate;
+        }
+
+        @keyframes logoFloat {
+            from { transform: translateY(0) rotate(-1deg); }
+            to { transform: translateY(-5px) rotate(1deg); }
+        }
+
         h1 {
-            color: var(--red);
+            color: var(--text);
             margin: 0;
-            letter-spacing: 1px;
+            letter-spacing: .4px;
             font-size: clamp(36px, 3vw, 46px);
             line-height: 1;
-            text-shadow: 0 0 34px rgba(0,0,0,.26);
+            text-shadow: 0 0 28px rgba(255,255,255,.08);
         }
 
         .muted {
             color: var(--muted);
             font-size: 15px;
             margin-top: 8px;
-            font-weight: 600;
+            font-weight: 650;
         }
 
         .top-actions {
@@ -477,14 +487,14 @@ LOGIN_HTML = """
         }
 
         .badge {
-            border: 1px solid rgba(0,0,0,.30);
-            background: rgba(16,16,20,.74);
-            color: var(--red);
-            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,.14);
+            background: rgba(16,16,20,.78);
+            color: var(--text);
+            border-radius: 14px;
             padding: 12px 17px;
-            font-weight: 900;
+            font-weight: 950;
             font-size: 14px;
-            box-shadow: inset 0 0 30px rgba(0,0,0,.035), 0 16px 42px rgba(0,0,0,.18);
+            box-shadow: inset 0 0 30px rgba(255,255,255,.025), 0 16px 42px rgba(0,0,0,.18);
             backdrop-filter: blur(14px);
         }
 
@@ -502,17 +512,13 @@ LOGIN_HTML = """
         }
 
         .card {
-            background: linear-gradient(180deg, rgba(20,20,24,.86), rgba(10,10,13,.90));
+            background: linear-gradient(180deg, rgba(22,22,27,.90), rgba(10,10,13,.92));
             border: 1px solid var(--border);
-            border-radius: 4px;
+            border-radius: 26px;
             padding: 22px;
             margin-bottom: 20px;
-            box-shadow: 0 22px 70px rgba(0,0,0,.36), 0 0 58px rgba(0,0,0,.045);
-            transition:
-                transform .22s cubic-bezier(.2,.8,.2,1),
-                border-color .22s ease,
-                box-shadow .22s ease,
-                background .22s ease;
+            box-shadow: 0 24px 80px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.04);
+            transition: transform .22s cubic-bezier(.2,.8,.2,1), border-color .22s ease, box-shadow .22s ease;
             backdrop-filter: blur(18px);
             position: relative;
             overflow: hidden;
@@ -522,21 +528,19 @@ LOGIN_HTML = """
             content: "";
             position: absolute;
             inset: 0;
-            background: radial-gradient(circle at var(--cardx, 50%) var(--cardy, 0%), rgba(0,0,0,.10), transparent 34%);
+            background: radial-gradient(circle at var(--cardx, 50%) var(--cardy, 0%), rgba(255,255,255,.09), transparent 34%);
             opacity: 0;
             transition: opacity .22s ease;
             pointer-events: none;
         }
 
         .card:hover {
-            border-color: rgba(0,0,0,.42);
-            box-shadow: 0 30px 90px rgba(0,0,0,.46), 0 0 86px rgba(0,0,0,.10);
+            border-color: rgba(255,255,255,.26);
+            box-shadow: 0 34px 96px rgba(0,0,0,.52), 0 0 54px rgba(255,255,255,.055);
             transform: translateY(-3px);
         }
 
-        .card:hover::after {
-            opacity: 1;
-        }
+        .card:hover::after { opacity: 1; }
 
         h3 {
             margin: 0 0 14px 0;
@@ -545,10 +549,10 @@ LOGIN_HTML = """
         }
 
         input, select {
-            background: rgba(5,5,6,.92);
+            background: #060607;
             color: var(--text);
-            border: 1px solid #cfcfcf;
-            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,.13);
+            border-radius: 15px;
             padding: 0 14px;
             outline: none;
             min-width: 230px;
@@ -559,26 +563,22 @@ LOGIN_HTML = """
         }
 
         input:focus, select:focus {
-            border-color: var(--red);
-            box-shadow: 0 0 0 4px rgba(0,0,0,.12), 0 0 30px rgba(0,0,0,.08);
+            border-color: rgba(255,255,255,.40);
+            box-shadow: 0 0 0 4px rgba(255,255,255,.075);
             transform: translateY(-1px);
         }
 
         button {
             background: transparent;
-            color: var(--red);
-            border: 1px solid var(--red);
-            border-radius: 4px;
+            color: var(--text);
+            border: 1px solid rgba(255,255,255,.20);
+            border-radius: 15px;
             padding: 0 17px;
-            font-weight: 900;
+            font-weight: 950;
             cursor: pointer;
             height: 48px;
             font-size: 14px;
-            transition:
-                transform .18s cubic-bezier(.2,.8,.2,1),
-                box-shadow .18s ease,
-                background .18s ease,
-                border-color .18s ease;
+            transition: transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .18s ease, background .18s ease, border-color .18s ease;
             position: relative;
             overflow: hidden;
         }
@@ -587,20 +587,19 @@ LOGIN_HTML = """
             content: "";
             position: absolute;
             inset: 0;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,.10), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
             transform: translateX(-110%);
             transition: transform .45s ease;
         }
 
         button:hover {
-            background: rgba(0,0,0,.10);
+            background: rgba(255,255,255,.07);
+            border-color: rgba(255,255,255,.36);
             transform: translateY(-2px);
-            box-shadow: 0 16px 40px rgba(0,0,0,.13);
+            box-shadow: 0 18px 48px rgba(0,0,0,.30);
         }
 
-        button:hover::before {
-            transform: translateX(110%);
-        }
+        button:hover::before { transform: translateX(110%); }
 
         button:disabled {
             opacity: .45;
@@ -608,14 +607,10 @@ LOGIN_HTML = """
             transform: none;
         }
 
-        .danger {
-            color: #ef4444;
-            border-color: #ef4444;
-        }
-
-        .ok { color: #22c55e; }
-        .warn { color: #f59e0b; }
-        .bad { color: #ef4444; }
+        .danger { color: #ffffff; border-color: rgba(255,255,255,.22); }
+        .ok { color: #9effb7; }
+        .warn { color: #ffe08a; }
+        .bad { color: #ff9b9b; }
 
         .row {
             display: flex;
@@ -637,8 +632,8 @@ LOGIN_HTML = """
             overflow-x: auto;
             max-height: 620px;
             overflow-y: auto;
-            border: 1px solid #d8d8d8;
-            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 22px;
             background: rgba(7,7,8,.82);
             box-shadow: inset 0 0 42px rgba(0,0,0,.22);
         }
@@ -652,7 +647,7 @@ LOGIN_HTML = """
         th, td {
             text-align: left;
             padding: 15px 14px;
-            border-bottom: 1px solid #e1e1e1;
+            border-bottom: 1px solid rgba(255,255,255,.08);
             font-size: 15px;
             vertical-align: middle;
         }
@@ -666,17 +661,12 @@ LOGIN_HTML = """
             backdrop-filter: blur(10px);
         }
 
-        tr {
-            transition: background .16s ease, transform .16s ease;
-        }
-
-        tr:hover td {
-            background: rgba(0,0,0,.045);
-        }
+        tr { transition: background .16s ease; }
+        tr:hover td { background: rgba(255,255,255,.045); }
 
         code {
-            color: var(--red);
-            font-weight: 900;
+            color: #ffffff;
+            font-weight: 950;
             letter-spacing: .2px;
         }
 
@@ -685,24 +675,24 @@ LOGIN_HTML = """
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            color: #444444;
+            color: #c7c7cf;
         }
 
         .check {
             width: 19px;
             height: 19px;
-            accent-color: var(--red);
+            accent-color: #ffffff;
             min-width: 0;
         }
 
         .pill {
             display: inline-block;
-            border-radius: 4px;
+            border-radius: 999px;
             padding: 6px 12px;
             font-size: 12px;
-            font-weight: 900;
-            background: #f1f1f1;
-            border: 1px solid #d0d0d0;
+            font-weight: 950;
+            background: #17171b;
+            border: 1px solid rgba(255,255,255,.12);
             box-shadow: inset 0 0 28px rgba(255,255,255,.025);
         }
 
@@ -715,33 +705,33 @@ LOGIN_HTML = """
         .copybtn {
             height: 31px;
             padding: 0 10px;
-            border-radius: 4px;
+            border-radius: 10px;
             font-size: 11px;
             color: var(--text);
-            border-color: #cfcfcf;
-            background: #ffffff;
+            border-color: rgba(255,255,255,.14);
+            background: #111114;
         }
 
         .copybtn:hover {
-            border-color: var(--red);
-            color: var(--red);
+            border-color: rgba(255,255,255,.34);
+            color: #fff;
         }
 
         .toast {
             position: fixed;
             right: 24px;
             bottom: 24px;
-            background: #ffffff;
-            border: 1px solid var(--red);
-            border-radius: 4px;
+            background: #111114;
+            border: 1px solid rgba(255,255,255,.22);
+            border-radius: 16px;
             padding: 13px 16px;
             color: var(--text);
-            font-weight: 900;
+            font-weight: 950;
             opacity: 0;
             transform: translateY(10px);
             transition: .18s ease;
             pointer-events: none;
-            box-shadow: 0 16px 50px rgba(0,0,0,.42), 0 0 36px rgba(0,0,0,.12);
+            box-shadow: 0 16px 50px rgba(0,0,0,.42), 0 0 36px rgba(255,255,255,.06);
             z-index: 30;
         }
 
@@ -753,13 +743,13 @@ LOGIN_HTML = """
         .tooltip {
             position: fixed;
             max-width: 540px;
-            background: #ffffff;
+            background: #111114;
             color: var(--text);
-            border: 1px solid rgba(0,0,0,.33);
-            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,.22);
+            border-radius: 13px;
             padding: 10px 12px;
             font-size: 12px;
-            font-weight: 800;
+            font-weight: 850;
             box-shadow: 0 20px 60px rgba(0,0,0,.45);
             opacity: 0;
             pointer-events: none;
@@ -776,20 +766,7 @@ LOGIN_HTML = """
 
         .logout {
             color: var(--text);
-            border-color: #cfcfcf;
-        }
-
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-        .brand img {
-            width: 58px;
-            height: 58px;
-            object-fit: contain;
-            filter: drop-shadow(0 10px 20px rgba(0,0,0,.14));
+            border-color: rgba(255,255,255,.14);
         }
 
         @media (max-width: 950px) {
@@ -808,7 +785,7 @@ LOGIN_HTML = """
 <body>
 <div class="orb"></div>
 <div class="login">
-    <div class="brand">
+    <div class="brand login-brand">
         <img src="/static/Logo%20Bloxsuro.png" alt="BLOXSURO Logo">
         <h1>BLOXSURO</h1>
     </div>
@@ -875,16 +852,16 @@ ADMIN_HTML = """
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         :root {
-            --red: #111111;
-            --red2: #333333;
-            --bg: #f4f4f4;
-            --surface: rgba(255,255,255,.86);
-            --card: rgba(255,255,255,.92);
-            --card2: rgba(250,250,250,.96);
-            --border: rgba(0,0,0,.14);
-            --text: #111111;
-            --muted: #555555;
-            --glow: rgba(0,0,0,.10);
+            --red: #ff1f2d;
+            --red2: #ff4050;
+            --bg: #020203;
+            --surface: rgba(8,8,11,.78);
+            --card: rgba(18,18,22,.82);
+            --card2: rgba(11,11,14,.94);
+            --border: rgba(255,255,255,.12);
+            --text: #f5f5f7;
+            --muted: #a8a8b4;
+            --glow: rgba(255,31,45,.16);
         }
 
         * { box-sizing: border-box; }
@@ -898,7 +875,10 @@ ADMIN_HTML = """
             margin: 0;
             color: var(--text);
             font-family: Segoe UI, Arial, sans-serif;
-            background: linear-gradient(180deg, #ffffff 0%, #f4f4f4 100%);
+            background:
+                radial-gradient(circle at var(--mx, 18%) var(--my, 0%), rgba(255,31,45,.24), transparent 28%),
+                radial-gradient(circle at calc(100% - var(--mx, 18%)) 12%, rgba(255,31,45,.10), transparent 24%),
+                linear-gradient(180deg, #0b0508 0%, #030304 48%, #080204 100%);
             background-attachment: fixed;
             overflow-x: hidden;
         }
@@ -909,7 +889,7 @@ ADMIN_HTML = """
             inset: -20%;
             background:
                 linear-gradient(115deg, transparent 0%, rgba(255,255,255,.035) 48%, transparent 52%),
-                radial-gradient(circle at 20% 25%, rgba(0,0,0,.08), transparent 32%);
+                radial-gradient(circle at 20% 25%, rgba(255,31,45,.08), transparent 32%);
             transform: translate3d(calc(var(--px, 0) * 1px), calc(var(--py, 0) * 1px), 0);
             pointer-events: none;
             opacity: .85;
@@ -923,12 +903,12 @@ ADMIN_HTML = """
 
         *::-webkit-scrollbar-track {
             background: rgba(255,255,255,.035);
-            border-radius: 4px;
+            border-radius: 999px;
         }
 
         *::-webkit-scrollbar-thumb {
-            background: rgba(0,0,0,.42);
-            border-radius: 4px;
+            background: rgba(255,31,45,.42);
+            border-radius: 999px;
             border: 2px solid rgba(0,0,0,.25);
         }
 
@@ -958,7 +938,7 @@ ADMIN_HTML = """
             letter-spacing: 1px;
             font-size: clamp(36px, 3vw, 46px);
             line-height: 1;
-            text-shadow: 0 0 34px rgba(0,0,0,.26);
+            text-shadow: 0 0 34px rgba(255,31,45,.26);
         }
 
         .muted {
@@ -975,14 +955,14 @@ ADMIN_HTML = """
         }
 
         .badge {
-            border: 1px solid rgba(0,0,0,.30);
+            border: 1px solid rgba(255,31,45,.30);
             background: rgba(16,16,20,.74);
             color: var(--red);
-            border-radius: 4px;
+            border-radius: 999px;
             padding: 12px 17px;
             font-weight: 900;
             font-size: 14px;
-            box-shadow: inset 0 0 30px rgba(0,0,0,.035), 0 16px 42px rgba(0,0,0,.18);
+            box-shadow: inset 0 0 30px rgba(255,31,45,.035), 0 16px 42px rgba(0,0,0,.18);
             backdrop-filter: blur(14px);
         }
 
@@ -1002,10 +982,10 @@ ADMIN_HTML = """
         .card {
             background: linear-gradient(180deg, rgba(20,20,24,.86), rgba(10,10,13,.90));
             border: 1px solid var(--border);
-            border-radius: 4px;
+            border-radius: 28px;
             padding: 22px;
             margin-bottom: 20px;
-            box-shadow: 0 22px 70px rgba(0,0,0,.36), 0 0 58px rgba(0,0,0,.045);
+            box-shadow: 0 22px 70px rgba(0,0,0,.36), 0 0 58px rgba(255,31,45,.045);
             transition:
                 transform .22s cubic-bezier(.2,.8,.2,1),
                 border-color .22s ease,
@@ -1020,15 +1000,15 @@ ADMIN_HTML = """
             content: "";
             position: absolute;
             inset: 0;
-            background: radial-gradient(circle at var(--cardx, 50%) var(--cardy, 0%), rgba(0,0,0,.10), transparent 34%);
+            background: radial-gradient(circle at var(--cardx, 50%) var(--cardy, 0%), rgba(255,31,45,.10), transparent 34%);
             opacity: 0;
             transition: opacity .22s ease;
             pointer-events: none;
         }
 
         .card:hover {
-            border-color: rgba(0,0,0,.42);
-            box-shadow: 0 30px 90px rgba(0,0,0,.46), 0 0 86px rgba(0,0,0,.10);
+            border-color: rgba(255,31,45,.42);
+            box-shadow: 0 30px 90px rgba(0,0,0,.46), 0 0 86px rgba(255,31,45,.10);
             transform: translateY(-3px);
         }
 
@@ -1045,8 +1025,8 @@ ADMIN_HTML = """
         input, select {
             background: rgba(5,5,6,.92);
             color: var(--text);
-            border: 1px solid #cfcfcf;
-            border-radius: 4px;
+            border: 1px solid #34343c;
+            border-radius: 15px;
             padding: 0 14px;
             outline: none;
             min-width: 230px;
@@ -1058,7 +1038,7 @@ ADMIN_HTML = """
 
         input:focus, select:focus {
             border-color: var(--red);
-            box-shadow: 0 0 0 4px rgba(0,0,0,.12), 0 0 30px rgba(0,0,0,.08);
+            box-shadow: 0 0 0 4px rgba(255,31,45,.12), 0 0 30px rgba(255,31,45,.08);
             transform: translateY(-1px);
         }
 
@@ -1066,7 +1046,7 @@ ADMIN_HTML = """
             background: transparent;
             color: var(--red);
             border: 1px solid var(--red);
-            border-radius: 4px;
+            border-radius: 15px;
             padding: 0 17px;
             font-weight: 900;
             cursor: pointer;
@@ -1091,9 +1071,9 @@ ADMIN_HTML = """
         }
 
         button:hover {
-            background: rgba(0,0,0,.10);
+            background: rgba(255,31,45,.10);
             transform: translateY(-2px);
-            box-shadow: 0 16px 40px rgba(0,0,0,.13);
+            box-shadow: 0 16px 40px rgba(255,31,45,.13);
         }
 
         button:hover::before {
@@ -1135,8 +1115,8 @@ ADMIN_HTML = """
             overflow-x: auto;
             max-height: 620px;
             overflow-y: auto;
-            border: 1px solid #d8d8d8;
-            border-radius: 4px;
+            border: 1px solid #26262d;
+            border-radius: 22px;
             background: rgba(7,7,8,.82);
             box-shadow: inset 0 0 42px rgba(0,0,0,.22);
         }
@@ -1150,7 +1130,7 @@ ADMIN_HTML = """
         th, td {
             text-align: left;
             padding: 15px 14px;
-            border-bottom: 1px solid #e1e1e1;
+            border-bottom: 1px solid #202027;
             font-size: 15px;
             vertical-align: middle;
         }
@@ -1169,7 +1149,7 @@ ADMIN_HTML = """
         }
 
         tr:hover td {
-            background: rgba(0,0,0,.045);
+            background: rgba(255,31,45,.045);
         }
 
         code {
@@ -1183,7 +1163,7 @@ ADMIN_HTML = """
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            color: #444444;
+            color: #b5b5c0;
         }
 
         .check {
@@ -1195,12 +1175,12 @@ ADMIN_HTML = """
 
         .pill {
             display: inline-block;
-            border-radius: 4px;
+            border-radius: 999px;
             padding: 6px 12px;
             font-size: 12px;
             font-weight: 900;
-            background: #f1f1f1;
-            border: 1px solid #d0d0d0;
+            background: #17171b;
+            border: 1px solid #303038;
             box-shadow: inset 0 0 28px rgba(255,255,255,.025);
         }
 
@@ -1213,11 +1193,11 @@ ADMIN_HTML = """
         .copybtn {
             height: 31px;
             padding: 0 10px;
-            border-radius: 4px;
+            border-radius: 10px;
             font-size: 11px;
             color: var(--text);
-            border-color: #cfcfcf;
-            background: #ffffff;
+            border-color: #34343c;
+            background: #111114;
         }
 
         .copybtn:hover {
@@ -1229,9 +1209,9 @@ ADMIN_HTML = """
             position: fixed;
             right: 24px;
             bottom: 24px;
-            background: #ffffff;
+            background: #111114;
             border: 1px solid var(--red);
-            border-radius: 4px;
+            border-radius: 16px;
             padding: 13px 16px;
             color: var(--text);
             font-weight: 900;
@@ -1239,7 +1219,7 @@ ADMIN_HTML = """
             transform: translateY(10px);
             transition: .18s ease;
             pointer-events: none;
-            box-shadow: 0 16px 50px rgba(0,0,0,.42), 0 0 36px rgba(0,0,0,.12);
+            box-shadow: 0 16px 50px rgba(0,0,0,.42), 0 0 36px rgba(255,31,45,.12);
             z-index: 30;
         }
 
@@ -1251,10 +1231,10 @@ ADMIN_HTML = """
         .tooltip {
             position: fixed;
             max-width: 540px;
-            background: #ffffff;
+            background: #111114;
             color: var(--text);
-            border: 1px solid rgba(0,0,0,.33);
-            border-radius: 4px;
+            border: 1px solid rgba(255,31,45,.33);
+            border-radius: 13px;
             padding: 10px 12px;
             font-size: 12px;
             font-weight: 800;
@@ -1274,20 +1254,7 @@ ADMIN_HTML = """
 
         .logout {
             color: var(--text);
-            border-color: #cfcfcf;
-        }
-
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-        .brand img {
-            width: 58px;
-            height: 58px;
-            object-fit: contain;
-            filter: drop-shadow(0 10px 20px rgba(0,0,0,.14));
+            border-color: #34343c;
         }
 
         @media (max-width: 950px) {
@@ -1307,7 +1274,7 @@ ADMIN_HTML = """
 <div class="wrap">
     <div class="topbar">
         <div>
-            <div class="brand">
+            <div class="brand admin-brand">
                 <img src="/static/Logo%20Bloxsuro.png" alt="BLOXSURO Logo">
                 <h1>BLOXSURO Admin</h1>
             </div>
