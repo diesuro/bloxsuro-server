@@ -368,16 +368,20 @@ ADMIN_HTML = """
         }
         .grid {
             display: grid;
-            grid-template-columns: 1fr 1.25fr;
+            grid-template-columns: 280px 1fr;
             gap: 18px;
+            align-items: start;
         }
         .card {
-            background: rgba(17, 17, 20, 0.96);
-            border: 1px solid #26262d;
-            border-radius: 20px;
+            background: linear-gradient(180deg, rgba(18, 18, 22, 0.98), rgba(12, 12, 15, 0.98));
+            border: 1px solid #282832;
+            border-radius: 22px;
             padding: 18px;
             margin-bottom: 18px;
-            box-shadow: 0 0 35px rgba(255, 31, 45, 0.035);
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28), 0 0 40px rgba(255, 31, 45, 0.035);
+        }
+        .card:hover {
+            border-color: #3a1f28;
         }
         h3 {
             margin: 0 0 12px 0;
@@ -435,10 +439,10 @@ ADMIN_HTML = """
         }
         .tablewrap {
             overflow-x: auto;
-            max-height: 520px;
+            max-height: 560px;
             overflow-y: auto;
             border: 1px solid #26262d;
-            border-radius: 16px;
+            border-radius: 18px;
             background: #070708;
         }
         table {
@@ -488,6 +492,24 @@ ADMIN_HTML = """
             font-weight: 800;
             background: #17171b;
             border: 1px solid #303038;
+        }
+        .keycell {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .copybtn {
+            height: 28px;
+            padding: 4px 9px;
+            border-radius: 9px;
+            font-size: 11px;
+            color: #f5f5f7;
+            border-color: #34343c;
+            background: #111114;
+        }
+        .copybtn:hover {
+            border-color: #ff1f2d;
+            color: #ff1f2d;
         }
         .toast {
             position: fixed;
@@ -693,7 +715,12 @@ function renderKeys() {
 
         tr.innerHTML = `
             <td><input class="check keyCheck" type="checkbox" value="${item.key}"></td>
-            <td><code>${item.key}</code></td>
+            <td>
+                <div class="keycell">
+                    <code>${item.key}</code>
+                    <button class="copybtn" onclick="copyKey(event, '${item.key}')">Copy</button>
+                </div>
+            </td>
             <td><span class="pill ${statusClass(item.status)}">${item.status}</span></td>
             <td>${item.remaining}</td>
             <td class="hwid" title="${item.hwid || "Not bound"}">${item.hwid || "Not bound"}</td>
@@ -701,6 +728,23 @@ function renderKeys() {
         `;
 
         tbody.appendChild(tr);
+    }
+}
+
+async function copyKey(event, key) {
+    event.stopPropagation();
+
+    try {
+        await navigator.clipboard.writeText(key);
+        toast("Key copied.");
+    } catch (e) {
+        const temp = document.createElement("textarea");
+        temp.value = key;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand("copy");
+        document.body.removeChild(temp);
+        toast("Key copied.");
     }
 }
 
