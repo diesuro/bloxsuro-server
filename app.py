@@ -336,6 +336,7 @@ def admin_list():
             "expires": expires,
             "remaining": remaining_text(expires),
             "hwid": hwid,
+            "owner": row.get("owner") or "",
             "active": bool(active),
             "status": status
         })
@@ -814,13 +815,15 @@ h3{margin:0 0 14px;font-size:21px}
   background:rgba(7,7,8,.82);
   box-shadow:inset 0 0 42px rgba(0,0,0,.22);
 }
-table{width:100%;border-collapse:collapse;min-width:940px}
+table{width:100%;border-collapse:collapse;min-width:1040px;table-layout:fixed}
 th,td{
   text-align:left;
   padding:15px 14px;
   border-bottom:1px solid rgba(255,255,255,.08);
   font-size:15px;
   vertical-align:middle;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 th{
   color:var(--muted);
@@ -834,6 +837,7 @@ tr{transition:background .16s ease}
 tr:hover td{background:rgba(255,36,52,.045)}
 code{color:var(--red);font-weight:950;letter-spacing:.2px}
 .hwid{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c7c7cf}
+.owner{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#f5f5f7;font-weight:850}
 .check{width:19px;height:19px;accent-color:var(--red);min-width:0}
 .pill{display:inline-block;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:950;background:#17171b;border:1px solid rgba(255,255,255,.12)}
 .ok{color:#9effb7}.warn{color:#ffe08a}.bad{color:#ff9b9b}
@@ -1011,7 +1015,7 @@ function filteredKeys(){
   const q=document.getElementById("search").value.toLowerCase().trim();
   const f=document.getElementById("filter").value;
   return allKeys.filter(item=>{
-    const hay=`${item.key} ${item.hwid||""} ${item.status}`.toLowerCase();
+    const hay=`${item.key} ${item.hwid||""} ${item.owner||""} ${item.status}`.toLowerCase();
     if(q&&!hay.includes(q))return false;
     if(f==="active"&&item.status!=="Active")return false;
     if(f==="disabled"&&item.status!=="Disabled")return false;
@@ -1065,9 +1069,8 @@ function renderKeys(){
       <td><span class="pill ${statusClass(item.status)}">${escapeHtml(item.status)}</span></td>
       <td>${escapeHtml(item.remaining)}</td>
       <td class="hwid" onmousemove="tooltip(event,'${safeHwid}')" onmouseleave="hideTooltip()">${safeHwid}</td>
-      <td>${escapeHtml(item.owner || "")}</td>
       <td class="owner">${escapeHtml((item.owner && item.owner.trim() !== "" ? item.owner : "Not linked"))}</td>
-            <td>${escapeHtml(item.expires)}</td>`;
+      <td>${escapeHtml(item.expires)}</td>`;
     frag.appendChild(tr);
   }
   tbody.appendChild(frag);
