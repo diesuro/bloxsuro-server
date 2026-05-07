@@ -14,7 +14,6 @@ ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "")
 def init_db():
     con = sqlite3.connect(DB)
     cur = con.cursor()
-
     cur.execute("""
     CREATE TABLE IF NOT EXISTS licenses (
         license_key TEXT PRIMARY KEY,
@@ -23,7 +22,6 @@ def init_db():
         active INTEGER
     )
     """)
-
     con.commit()
     con.close()
 
@@ -48,7 +46,6 @@ def db_query(query, args=(), fetchone=False, fetchall=False):
 def parse_duration(duration: str):
     duration = str(duration).strip().lower()
     match = re.fullmatch(r"(\d+)([mhd])", duration)
-
     if not match:
         return None
 
@@ -60,10 +57,8 @@ def parse_duration(duration: str):
 
     if unit == "m":
         return timedelta(minutes=value)
-
     if unit == "h":
         return timedelta(hours=value)
-
     if unit == "d":
         return timedelta(days=value)
 
@@ -76,12 +71,6 @@ def check_secret_from_json(data):
 
 def check_secret_from_url():
     return ADMIN_SECRET and request.args.get("secret", "") == ADMIN_SECRET
-
-
-def mask_key(key):
-    if not key or len(key) < 10:
-        return key
-    return key[:9] + "..." + key[-4:]
 
 
 def remaining_text(expires):
@@ -105,6 +94,14 @@ def remaining_text(expires):
         return "Unknown"
 
 
+def key_status(expires, active):
+    if not active:
+        return "Disabled"
+    if remaining_text(expires) == "Expired":
+        return "Expired"
+    return "Active"
+
+
 @app.route("/", methods=["GET"])
 def home():
     init_db()
@@ -123,10 +120,7 @@ def verify():
     hwid = str(data.get("hwid", "")).strip()
 
     if not key or not hwid:
-        return jsonify({
-            "valid": False,
-            "reason": "Missing key or HWID"
-        }), 400
+        return jsonify({"valid": False, "reason": "Missing key or HWID"}), 400
 
     row = db_query(
         "SELECT license_key, expires, hwid, active FROM licenses WHERE license_key=?",
@@ -135,44 +129,26 @@ def verify():
     )
 
     if not row:
-        return jsonify({
-            "valid": False,
-            "reason": "Invalid key"
-        })
+        return jsonify({"valid": False, "reason": "Invalid key"})
 
     _, expires, saved_hwid, active = row
 
     if active != 1:
-        return jsonify({
-            "valid": False,
-            "reason": "Disabled key"
-        })
+        return jsonify({"valid": False, "reason": "Disabled key"})
 
     try:
         expire_date = datetime.fromisoformat(expires)
     except Exception:
-        return jsonify({
-            "valid": False,
-            "reason": "Invalid expiration"
-        })
+        return jsonify({"valid": False, "reason": "Invalid expiration"})
 
     if datetime.utcnow() > expire_date:
-        return jsonify({
-            "valid": False,
-            "reason": "Expired key"
-        })
+        return jsonify({"valid": False, "reason": "Expired key"})
 
     if saved_hwid and saved_hwid != hwid:
-        return jsonify({
-            "valid": False,
-            "reason": "Different computer"
-        })
+        return jsonify({"valid": False, "reason": "Different computer"})
 
     if not saved_hwid:
-        db_query(
-            "UPDATE licenses SET hwid=? WHERE license_key=?",
-            (hwid, key)
-        )
+        db_query("UPDATE licenses SET hwid=? WHERE license_key=?", (hwid, key))
 
     remaining = expire_date - datetime.utcnow()
 
@@ -189,27 +165,18 @@ def admin_create():
     init_db()
 
     if not ADMIN_SECRET:
-        return jsonify({
-            "ok": False,
-            "error": "ADMIN_SECRET is not configured"
-        }), 500
+        return jsonify({"ok": False, "error": "ADMIN_SECRET is not configured"}), 500
 
     data = request.get_json(silent=True) or {}
 
     if not check_secret_from_json(data):
-        return jsonify({
-            "ok": False,
-            "error": "Unauthorized"
-        }), 401
+        return jsonify({"ok": False, "error": "Unauthorized"}), 401
 
     duration = str(data.get("duration", "30d")).strip().lower()
     delta = parse_duration(duration)
 
     if not delta:
-        return jsonify({
-            "ok": False,
-            "error": "Invalid duration format. Use examples: 1m, 1h, 1d"
-        }), 400
+        return jsonify({"ok": False, "error": "Invalid duration format. Use examples: 1m, 1h, 1d"}), 400
 
     license_key = "BLOX-" + secrets.token_hex(6).upper()
     expires = (datetime.utcnow() + delta).isoformat()
@@ -219,172 +186,106 @@ def admin_create():
         (license_key, expires, None, 1)
     )
 
-    return jsonify({
-        "ok": True,
-        "key": license_key,
-        "expires": expires,
-        "duration": duration
-    })
+    return jsonify({"ok": True, "key": license_key, "expires": expires, "duration": duration})
+
+
+@app.route("/admin/action", methods=["POST"])
+def admin_action():
+    init_db()
+
+    if not ADMIN_SECRET:
+        return jsonify({"ok": False, "error": "ADMIN_SECRET is not configured"}), 500
+
+    data = request.get_json(silent=True) or {}
+
+    if not check_secret_from_json(data):
+        return jsonify({"ok": False, "error": "Unauthorized"}), 401
+
+    action = str(data.get("action", "")).strip().lower()
+    keys = data.get("keys", [])
+
+    if isinstance(keys, str):
+        keys = [keys]
+
+    keys = [str(k).strip() for k in keys if str(k).strip()]
+
+    if not keys:
+        return jsonify({"ok": False, "error": "No keys selected"}), 400
+
+    allowed = {"disable", "enable", "reset_hwid", "delete"}
+    if action not in allowed:
+        return jsonify({"ok": False, "error": "Invalid action"}), 400
+
+    changed = 0
+
+    for key in keys:
+        if action == "disable":
+            db_query("UPDATE licenses SET active=0 WHERE license_key=?", (key,))
+        elif action == "enable":
+            db_query("UPDATE licenses SET active=1 WHERE license_key=?", (key,))
+        elif action == "reset_hwid":
+            db_query("UPDATE licenses SET hwid=NULL WHERE license_key=?", (key,))
+        elif action == "delete":
+            db_query("DELETE FROM licenses WHERE license_key=?", (key,))
+        changed += 1
+
+    return jsonify({"ok": True, "action": action, "changed": changed})
 
 
 @app.route("/admin/disable", methods=["POST"])
 def admin_disable():
-    init_db()
-
-    if not ADMIN_SECRET:
-        return jsonify({
-            "ok": False,
-            "error": "ADMIN_SECRET is not configured"
-        }), 500
-
     data = request.get_json(silent=True) or {}
-
-    if not check_secret_from_json(data):
-        return jsonify({
-            "ok": False,
-            "error": "Unauthorized"
-        }), 401
-
-    key = str(data.get("key", "")).strip()
-
-    if not key:
-        return jsonify({
-            "ok": False,
-            "error": "Missing key"
-        }), 400
-
-    db_query(
-        "UPDATE licenses SET active=0 WHERE license_key=?",
-        (key,)
-    )
-
-    return jsonify({
-        "ok": True,
-        "disabled": key
-    })
+    data["action"] = "disable"
+    return admin_action_from_data(data)
 
 
 @app.route("/admin/enable", methods=["POST"])
 def admin_enable():
-    init_db()
-
-    if not ADMIN_SECRET:
-        return jsonify({
-            "ok": False,
-            "error": "ADMIN_SECRET is not configured"
-        }), 500
-
     data = request.get_json(silent=True) or {}
-
-    if not check_secret_from_json(data):
-        return jsonify({
-            "ok": False,
-            "error": "Unauthorized"
-        }), 401
-
-    key = str(data.get("key", "")).strip()
-
-    if not key:
-        return jsonify({
-            "ok": False,
-            "error": "Missing key"
-        }), 400
-
-    db_query(
-        "UPDATE licenses SET active=1 WHERE license_key=?",
-        (key,)
-    )
-
-    return jsonify({
-        "ok": True,
-        "enabled": key
-    })
+    data["action"] = "enable"
+    return admin_action_from_data(data)
 
 
 @app.route("/admin/reset-hwid", methods=["POST"])
 def admin_reset_hwid():
-    init_db()
-
-    if not ADMIN_SECRET:
-        return jsonify({
-            "ok": False,
-            "error": "ADMIN_SECRET is not configured"
-        }), 500
-
     data = request.get_json(silent=True) or {}
-
-    if not check_secret_from_json(data):
-        return jsonify({
-            "ok": False,
-            "error": "Unauthorized"
-        }), 401
-
-    key = str(data.get("key", "")).strip()
-
-    if not key:
-        return jsonify({
-            "ok": False,
-            "error": "Missing key"
-        }), 400
-
-    row = db_query(
-        "SELECT license_key FROM licenses WHERE license_key=?",
-        (key,),
-        fetchone=True
-    )
-
-    if not row:
-        return jsonify({
-            "ok": False,
-            "error": "Key not found"
-        }), 404
-
-    db_query(
-        "UPDATE licenses SET hwid=NULL WHERE license_key=?",
-        (key,)
-    )
-
-    return jsonify({
-        "ok": True,
-        "reset_hwid": key
-    })
+    data["action"] = "reset_hwid"
+    return admin_action_from_data(data)
 
 
 @app.route("/admin/delete", methods=["POST"])
 def admin_delete():
-    init_db()
-
-    if not ADMIN_SECRET:
-        return jsonify({
-            "ok": False,
-            "error": "ADMIN_SECRET is not configured"
-        }), 500
-
     data = request.get_json(silent=True) or {}
+    data["action"] = "delete"
+    return admin_action_from_data(data)
+
+
+def admin_action_from_data(data):
+    if not ADMIN_SECRET:
+        return jsonify({"ok": False, "error": "ADMIN_SECRET is not configured"}), 500
 
     if not check_secret_from_json(data):
-        return jsonify({
-            "ok": False,
-            "error": "Unauthorized"
-        }), 401
+        return jsonify({"ok": False, "error": "Unauthorized"}), 401
 
     key = str(data.get("key", "")).strip()
-
     if not key:
-        return jsonify({
-            "ok": False,
-            "error": "Missing key"
-        }), 400
+        return jsonify({"ok": False, "error": "Missing key"}), 400
 
-    db_query(
-        "DELETE FROM licenses WHERE license_key=?",
-        (key,)
-    )
+    action = data.get("action")
+    if action == "disable":
+        db_query("UPDATE licenses SET active=0 WHERE license_key=?", (key,))
+        return jsonify({"ok": True, "disabled": key})
+    if action == "enable":
+        db_query("UPDATE licenses SET active=1 WHERE license_key=?", (key,))
+        return jsonify({"ok": True, "enabled": key})
+    if action == "reset_hwid":
+        db_query("UPDATE licenses SET hwid=NULL WHERE license_key=?", (key,))
+        return jsonify({"ok": True, "reset_hwid": key})
+    if action == "delete":
+        db_query("DELETE FROM licenses WHERE license_key=?", (key,))
+        return jsonify({"ok": True, "deleted": key})
 
-    return jsonify({
-        "ok": True,
-        "deleted": key
-    })
+    return jsonify({"ok": False, "error": "Invalid action"}), 400
 
 
 @app.route("/admin/list", methods=["POST"])
@@ -392,18 +293,12 @@ def admin_list():
     init_db()
 
     if not ADMIN_SECRET:
-        return jsonify({
-            "ok": False,
-            "error": "ADMIN_SECRET is not configured"
-        }), 500
+        return jsonify({"ok": False, "error": "ADMIN_SECRET is not configured"}), 500
 
     data = request.get_json(silent=True) or {}
 
     if not check_secret_from_json(data):
-        return jsonify({
-            "ok": False,
-            "error": "Unauthorized"
-        }), 401
+        return jsonify({"ok": False, "error": "Unauthorized"}), 401
 
     rows = db_query(
         "SELECT license_key, expires, hwid, active FROM licenses ORDER BY expires DESC",
@@ -412,19 +307,17 @@ def admin_list():
 
     keys = []
     for license_key, expires, hwid, active in rows:
+        status = key_status(expires, bool(active))
         keys.append({
             "key": license_key,
             "expires": expires,
             "remaining": remaining_text(expires),
             "hwid": hwid,
-            "active": bool(active)
+            "active": bool(active),
+            "status": status
         })
 
-    return jsonify({
-        "ok": True,
-        "count": len(keys),
-        "keys": keys
-    })
+    return jsonify({"ok": True, "count": len(keys), "keys": keys})
 
 
 ADMIN_HTML = """
@@ -434,32 +327,61 @@ ADMIN_HTML = """
     <title>BLOXSURO Admin</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
+        * { box-sizing: border-box; }
         body {
-            background: #050506;
+            background: radial-gradient(circle at top, #111116 0%, #050506 42%, #020203 100%);
             color: #f5f5f7;
             font-family: Segoe UI, Arial, sans-serif;
             margin: 0;
             padding: 28px;
         }
         .wrap {
-            max-width: 1100px;
+            max-width: 1180px;
             margin: auto;
+        }
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 22px;
         }
         h1 {
             color: #ff1f2d;
-            margin-bottom: 4px;
+            margin: 0;
             letter-spacing: 1px;
+            font-size: 32px;
         }
         .muted {
             color: #a1a1aa;
-            margin-bottom: 24px;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        .badge {
+            border: 1px solid #33232a;
+            background: #101014;
+            color: #ff1f2d;
+            border-radius: 999px;
+            padding: 9px 14px;
+            font-weight: 800;
+            font-size: 13px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1.25fr;
+            gap: 18px;
         }
         .card {
-            background: #111114;
+            background: rgba(17, 17, 20, 0.96);
             border: 1px solid #26262d;
-            border-radius: 18px;
+            border-radius: 20px;
             padding: 18px;
             margin-bottom: 18px;
+            box-shadow: 0 0 35px rgba(255, 31, 45, 0.035);
+        }
+        h3 {
+            margin: 0 0 12px 0;
+            font-size: 18px;
         }
         input, select {
             background: #050506;
@@ -469,6 +391,11 @@ ADMIN_HTML = """
             padding: 12px;
             outline: none;
             min-width: 220px;
+            height: 42px;
+            font-weight: 700;
+        }
+        input:focus {
+            border-color: #ff1f2d;
         }
         button {
             background: transparent;
@@ -476,187 +403,315 @@ ADMIN_HTML = """
             border: 1px solid #ff1f2d;
             border-radius: 12px;
             padding: 11px 14px;
-            font-weight: 700;
+            font-weight: 800;
             cursor: pointer;
-            margin: 4px;
+            height: 42px;
+            transition: 0.12s ease;
         }
         button:hover {
             background: #1d1d23;
+            transform: translateY(-1px);
         }
         .danger {
             color: #ef4444;
             border-color: #ef4444;
         }
-        .ok {
-            color: #22c55e;
-        }
-        .warn {
-            color: #f59e0b;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            overflow: hidden;
-            border-radius: 14px;
-        }
-        th, td {
-            text-align: left;
-            padding: 12px;
-            border-bottom: 1px solid #26262d;
-            font-size: 14px;
-        }
-        th {
-            color: #a1a1aa;
-        }
-        code {
-            color: #ff1f2d;
-        }
+        .ok { color: #22c55e; }
+        .warn { color: #f59e0b; }
+        .bad { color: #ef4444; }
         .row {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
             align-items: center;
         }
-        #result {
-            white-space: pre-wrap;
-            background: #050506;
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .tablewrap {
+            overflow-x: auto;
+            max-height: 520px;
+            overflow-y: auto;
             border: 1px solid #26262d;
-            border-radius: 14px;
+            border-radius: 16px;
+            background: #070708;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 880px;
+        }
+        th, td {
+            text-align: left;
             padding: 12px;
-            min-height: 42px;
-            max-height: 180px;
-            overflow: auto;
+            border-bottom: 1px solid #202027;
+            font-size: 14px;
+            vertical-align: middle;
+        }
+        th {
+            color: #a1a1aa;
+            background: #0d0d10;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        tr:hover td {
+            background: #101014;
+        }
+        code {
+            color: #ff1f2d;
+            font-weight: 800;
+        }
+        .hwid {
+            max-width: 220px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #b5b5c0;
+        }
+        .check {
+            width: 18px;
+            height: 18px;
+            accent-color: #ff1f2d;
+            min-width: 0;
+        }
+        .pill {
+            display: inline-block;
+            border-radius: 999px;
+            padding: 5px 10px;
+            font-size: 12px;
+            font-weight: 800;
+            background: #17171b;
+            border: 1px solid #303038;
+        }
+        .toast {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            background: #111114;
+            border: 1px solid #ff1f2d;
+            border-radius: 14px;
+            padding: 12px 16px;
             color: #f5f5f7;
+            font-weight: 800;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: 0.18s ease;
+            pointer-events: none;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        @media (max-width: 850px) {
+            .grid { grid-template-columns: 1fr; }
+            body { padding: 16px; }
         }
     </style>
 </head>
 <body>
 <div class="wrap">
-    <h1>BLOXSURO Admin</h1>
-    <div class="muted">License panel</div>
-
-    <div class="card">
-        <h3>Create Key</h3>
-        <div class="row">
-            <input id="duration" value="30d" placeholder="1m, 1h, 1d, 30d">
-            <button onclick="createKey()">Create</button>
+    <div class="topbar">
+        <div>
+            <h1>BLOXSURO Admin</h1>
+            <div class="muted">License panel • create, select and manage keys</div>
         </div>
+        <div class="badge" id="counter">Loading...</div>
     </div>
 
-    <div class="card">
-        <h3>Manage Key</h3>
-        <div class="row">
-            <input id="key" placeholder="BLOX-XXXXXXXXXXXX">
-            <button onclick="resetHwid()">Reset HWID</button>
-            <button onclick="disableKey()" class="danger">Disable</button>
-            <button onclick="enableKey()">Enable</button>
-            <button onclick="deleteKey()" class="danger">Delete</button>
+    <div class="grid">
+        <div>
+            <div class="card">
+                <h3>Create Key</h3>
+                <div class="row">
+                    <input id="duration" value="30d" placeholder="1m, 1h, 1d, 30d">
+                    <button onclick="createKey()">Create Key</button>
+                </div>
+                <div class="muted" style="margin-top:10px;">Examples: 15m, 1h, 7d, 30d</div>
+            </div>
+
+            <div class="card">
+                <h3>Bulk Actions</h3>
+                <div class="row">
+                    <button onclick="bulkAction('reset_hwid')">Reset HWID</button>
+                    <button onclick="bulkAction('disable')" class="danger">Disable</button>
+                    <button onclick="bulkAction('enable')">Re-enable</button>
+                    <button onclick="bulkAction('delete')" class="danger">Delete</button>
+                </div>
+                <div class="muted" style="margin-top:10px;">Select keys in the table, then choose an action.</div>
+            </div>
         </div>
-    </div>
 
-    <div class="card">
-        <h3>Result</h3>
-        <div id="result">Ready.</div>
-    </div>
+        <div>
+            <div class="card">
+                <h3>Keys</h3>
+                <div class="toolbar">
+                    <div class="row">
+                        <input id="search" placeholder="Search key or HWID..." oninput="renderKeys()">
+                        <select id="filter" onchange="renderKeys()">
+                            <option value="all">All</option>
+                            <option value="active">Active</option>
+                            <option value="disabled">Disabled</option>
+                            <option value="expired">Expired</option>
+                            <option value="bound">Bound HWID</option>
+                            <option value="unbound">Unbound</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <button onclick="loadKeys()">Refresh</button>
+                    </div>
+                </div>
 
-    <div class="card">
-        <h3>Keys</h3>
-        <button onclick="loadKeys()">Refresh List</button>
-        <div style="overflow-x:auto;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Key</th>
-                        <th>Remaining</th>
-                        <th>Active</th>
-                        <th>HWID</th>
-                        <th>Expires</th>
-                    </tr>
-                </thead>
-                <tbody id="keys"></tbody>
-            </table>
+                <div class="tablewrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th><input class="check" type="checkbox" id="selectAll" onchange="toggleAll()"></th>
+                                <th>Key</th>
+                                <th>Status</th>
+                                <th>Remaining</th>
+                                <th>HWID</th>
+                                <th>Expires</th>
+                            </tr>
+                        </thead>
+                        <tbody id="keys"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
+<div id="toast" class="toast">Ready.</div>
+
 <script>
 const secret = new URLSearchParams(window.location.search).get("secret") || "";
+let allKeys = [];
 
-async function postJSON(url, payload, showResult = true) {
+function toast(message) {
+    const el = document.getElementById("toast");
+    el.textContent = message;
+    el.classList.add("show");
+    clearTimeout(window.__toastTimer);
+    window.__toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+async function postJSON(url, payload) {
     const res = await fetch(url, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({...payload, secret})
     });
+
     const data = await res.json();
 
-    if (showResult) {
-        let output = data;
-
-        // Avoid making the Result box huge when many keys exist.
-        if (url === "/admin/list" && data.ok) {
-            output = {
-                ok: true,
-                count: data.count,
-                message: "Key list refreshed below."
-            };
-        }
-
-        document.getElementById("result").innerText = JSON.stringify(output, null, 2);
+    if (!data.ok && data.error) {
+        toast(data.error);
     }
 
     return data;
 }
 
 async function createKey() {
-    const duration = document.getElementById("duration").value;
-    await postJSON("/admin/create", {duration});
-    await loadKeys();
+    const duration = document.getElementById("duration").value.trim();
+    const data = await postJSON("/admin/create", {duration});
+
+    if (data.ok) {
+        toast("Created: " + data.key);
+        await loadKeys();
+    }
 }
 
-async function resetHwid() {
-    const key = document.getElementById("key").value.trim();
-    await postJSON("/admin/reset-hwid", {key});
-    await loadKeys();
+function selectedKeys() {
+    return Array.from(document.querySelectorAll(".keyCheck:checked")).map(x => x.value);
 }
 
-async function disableKey() {
-    const key = document.getElementById("key").value.trim();
-    await postJSON("/admin/disable", {key});
-    await loadKeys();
+async function bulkAction(action) {
+    const keys = selectedKeys();
+
+    if (keys.length === 0) {
+        toast("No keys selected.");
+        return;
+    }
+
+    if (action === "delete" && !confirm("Delete selected keys?")) {
+        return;
+    }
+
+    const data = await postJSON("/admin/action", {action, keys});
+
+    if (data.ok) {
+        toast(`${data.changed} key(s) updated.`);
+        await loadKeys();
+    }
 }
 
-async function enableKey() {
-    const key = document.getElementById("key").value.trim();
-    await postJSON("/admin/enable", {key});
-    await loadKeys();
+function toggleAll() {
+    const checked = document.getElementById("selectAll").checked;
+    document.querySelectorAll(".keyCheck").forEach(cb => cb.checked = checked);
 }
 
-async function deleteKey() {
-    const key = document.getElementById("key").value.trim();
-    if (!confirm("Delete this key?")) return;
-    await postJSON("/admin/delete", {key});
-    await loadKeys();
+function statusClass(status) {
+    if (status === "Active") return "ok";
+    if (status === "Expired") return "warn";
+    return "bad";
+}
+
+function filteredKeys() {
+    const q = document.getElementById("search").value.toLowerCase().trim();
+    const f = document.getElementById("filter").value;
+
+    return allKeys.filter(item => {
+        const hay = `${item.key} ${item.hwid || ""} ${item.status}`.toLowerCase();
+
+        if (q && !hay.includes(q)) return false;
+        if (f === "active" && item.status !== "Active") return false;
+        if (f === "disabled" && item.status !== "Disabled") return false;
+        if (f === "expired" && item.status !== "Expired") return false;
+        if (f === "bound" && !item.hwid) return false;
+        if (f === "unbound" && item.hwid) return false;
+
+        return true;
+    });
+}
+
+function renderKeys() {
+    const tbody = document.getElementById("keys");
+    const keys = filteredKeys();
+    tbody.innerHTML = "";
+    document.getElementById("selectAll").checked = false;
+
+    document.getElementById("counter").textContent = `${allKeys.length} total • ${keys.length} shown`;
+
+    for (const item of keys) {
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+            <td><input class="check keyCheck" type="checkbox" value="${item.key}"></td>
+            <td><code>${item.key}</code></td>
+            <td><span class="pill ${statusClass(item.status)}">${item.status}</span></td>
+            <td>${item.remaining}</td>
+            <td class="hwid" title="${item.hwid || "Not bound"}">${item.hwid || "Not bound"}</td>
+            <td>${item.expires}</td>
+        `;
+
+        tbody.appendChild(tr);
+    }
 }
 
 async function loadKeys() {
     const data = await postJSON("/admin/list", {});
-    const tbody = document.getElementById("keys");
-    tbody.innerHTML = "";
 
     if (!data.ok) return;
 
-    for (const item of data.keys) {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td><code>${item.key}</code></td>
-            <td>${item.remaining}</td>
-            <td>${item.active ? '<span class="ok">YES</span>' : '<span class="warn">NO</span>'}</td>
-            <td>${item.hwid || "Not bound"}</td>
-            <td>${item.expires}</td>
-        `;
-        tbody.appendChild(tr);
-    }
+    allKeys = data.keys || [];
+    renderKeys();
+    toast("Keys refreshed.");
 }
 
 loadKeys();
