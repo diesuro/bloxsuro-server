@@ -1066,7 +1066,8 @@ function renderKeys(){
       <td>${escapeHtml(item.remaining)}</td>
       <td class="hwid" onmousemove="tooltip(event,'${safeHwid}')" onmouseleave="hideTooltip()">${safeHwid}</td>
       <td>${escapeHtml(item.owner || "")}</td>
-      <td>${escapeHtml(item.expires)}</td>`;
+      <td class="owner">${escapeHtml(item.owner || "Not linked")}</td>
+            <td>${escapeHtml(item.expires)}</td>`;
     frag.appendChild(tr);
   }
   tbody.appendChild(frag);
