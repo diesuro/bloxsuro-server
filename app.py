@@ -7,11 +7,20 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-DB = "licenses.db"
+# Render filesystem is ephemeral unless you use a Persistent Disk.
+# Recommended Render Disk mount path: /var/data
+# You can also set DB_DIR in Render Environment Variables.
+DB_DIR = os.environ.get("DB_DIR", "/var/data" if os.path.isdir("/var") else ".")
+os.makedirs(DB_DIR, exist_ok=True)
+DB = os.path.join(DB_DIR, "licenses.db")
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "")
 
 
 def init_db():
+    try:
+        os.makedirs(os.path.dirname(DB) or ".", exist_ok=True)
+    except Exception:
+        pass
     con = sqlite3.connect(DB)
     cur = con.cursor()
     cur.execute("""
@@ -107,7 +116,8 @@ def home():
     init_db()
     return jsonify({
         "online": True,
-        "service": "BLOXSURO License Server"
+        "service": "BLOXSURO License Server",
+        "db_path": DB
     })
 
 
@@ -541,7 +551,7 @@ ADMIN_HTML = """
     <div class="topbar">
         <div>
             <h1>BLOXSURO Admin</h1>
-            <div class="muted">License panel • create, select and manage keys</div>
+            <div class="muted">License panel • create, select and manage keys • Persistent DB enabled</div>
         </div>
         <div class="badge" id="counter">Loading...</div>
     </div>
