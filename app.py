@@ -2,15 +2,11 @@ from flask import Flask, request, jsonify, render_template_string, session, redi
 import os
 import re
 import secrets
-import sqlite3
 from datetime import datetime, timedelta
 from functools import wraps
 
-try:
-    import psycopg2
-    import psycopg2.extras
-except Exception:
-    psycopg2 = None
+import psycopg2
+import psycopg2.extras
 
 
 app = Flask(__name__)
@@ -29,13 +25,11 @@ ADMIN_USERS = {
 }
 ADMIN_USERS = {u: p for u, p in ADMIN_USERS.items() if u and p}
 
-DB_DIR = os.environ.get("DB_DIR", ".")
-os.makedirs(DB_DIR, exist_ok=True)
-SQLITE_DB = os.path.join(DB_DIR, "licenses.db")
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 
 
 def using_postgres():
-    return bool(DATABASE_URL and DATABASE_URL.startswith(("postgresql://", "postgres://")) and psycopg2 is not None)
+    return True
 
 
 def now_utc():
@@ -43,46 +37,40 @@ def now_utc():
 
 
 def get_conn():
-    if using_postgres():
-        return psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
-    con = sqlite3.connect(SQLITE_DB)
-    con.row_factory = sqlite3.Row
-    return con
+    return psycopg2.connect(
+        DATABASE_URL,
+        cursor_factory=psycopg2.extras.RealDictCursor,
+        sslmode="require"
+    )
 
 
 def init_db():
     con = get_conn()
     cur = con.cursor()
+
     cur.execute("""
     CREATE TABLE IF NOT EXISTS licenses (
         license_key TEXT PRIMARY KEY,
         expires TEXT NOT NULL,
         hwid TEXT,
-        active INTEGER NOT NULL DEFAULT 1,
+        active BOOLEAN NOT NULL DEFAULT TRUE,
         created_at TEXT,
-        updated_at TEXT
+        updated_at TEXT,
+        owner TEXT DEFAULT ''
     )
     """)
-    if using_postgres():
-        cur.execute("ALTER TABLE licenses ADD COLUMN IF NOT EXISTS owner TEXT")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_hwid ON licenses(hwid)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_owner ON licenses(owner)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_active ON licenses(active)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_expires ON licenses(expires)")
-    else:
-        try:
-            cur.execute("PRAGMA table_info(licenses)")
-            cols = [row[1] for row in cur.fetchall()]
-            if "owner" not in cols:
-                cur.execute("ALTER TABLE licenses ADD COLUMN owner TEXT")
-        except Exception:
-            pass
+
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_hwid ON licenses(hwid)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_owner ON licenses(owner)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_active ON licenses(active)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_expires ON licenses(expires)")
+
     con.commit()
     con.close()
 
 
 def sql_params(query):
-    return query.replace("?", "%s") if using_postgres() else query
+    return query.replace("?", "%s")
 
 
 def db_query(query, args=(), fetchone=False, fetchall=False):
@@ -815,7 +803,7 @@ h3{margin:0 0 14px;font-size:21px}
   background:rgba(7,7,8,.82);
   box-shadow:inset 0 0 42px rgba(0,0,0,.22);
 }
-table{width:100%;border-collapse:collapse;min-width:1040px;table-layout:fixed}
+table{width:100%;border-collapse:collapse;min-width:1180px;table-layout:auto}
 th,td{
   text-align:left;
   padding:15px 14px;
@@ -837,7 +825,22 @@ tr{transition:background .16s ease}
 tr:hover td{background:rgba(255,36,52,.045)}
 code{color:var(--red);font-weight:950;letter-spacing:.2px}
 .hwid{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c7c7cf}
-.owner{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#f5f5f7;font-weight:850}
+.owner{
+  min-width:230px;
+  width:230px;
+  color:#f5f5f7;
+  font-weight:850;
+  font-family:Consolas,monospace;
+  white-space:nowrap;
+  overflow:visible;
+  text-overflow:clip;
+  cursor:pointer;
+  transition:.18s ease;
+}
+.owner:hover{
+  color:#ff2434;
+  text-shadow:0 0 18px rgba(255,36,52,.35);
+}
 .check{width:19px;height:19px;accent-color:var(--red);min-width:0}
 .pill{display:inline-block;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:950;background:#17171b;border:1px solid rgba(255,255,255,.12)}
 .ok{color:#9effb7}.warn{color:#ffe08a}.bad{color:#ff9b9b}
@@ -1069,12 +1072,40 @@ function renderKeys(){
       <td><span class="pill ${statusClass(item.status)}">${escapeHtml(item.status)}</span></td>
       <td>${escapeHtml(item.remaining)}</td>
       <td class="hwid" onmousemove="tooltip(event,'${safeHwid}')" onmouseleave="hideTooltip()">${safeHwid}</td>
-      <td class="owner">${escapeHtml((item.owner && item.owner.trim() !== "" ? item.owner : "Not linked"))}</td>
+      <td
+ class="owner"
+ onclick="copyOwner(event, item.owner || '')"
+ onmousemove="tooltip(event, item.owner ? 'Click to copy owner: ' + item.owner : 'No owner linked')"
+ onmouseleave="hideTooltip()">
+${escapeHtml((item.owner && item.owner.trim() !== "" ? item.owner : "Not linked"))}
+</td>
       <td>${escapeHtml(item.expires)}</td>`;
     frag.appendChild(tr);
   }
   tbody.appendChild(frag);
 }
+async function copyOwner(event, owner){
+  event.stopPropagation();
+
+  if(!owner || !owner.trim()){
+    toast("No owner linked.");
+    return;
+  }
+
+  try{
+    await navigator.clipboard.writeText(owner);
+    toast("Owner copied.");
+  }catch(e){
+    const temp=document.createElement("textarea");
+    temp.value=owner;
+    document.body.appendChild(temp);
+    temp.select();
+    document.execCommand("copy");
+    document.body.removeChild(temp);
+    toast("Owner copied.");
+  }
+}
+
 async function copyKey(event,key){
   event.stopPropagation();
   try{await navigator.clipboard.writeText(key);toast("Key copied.")}
