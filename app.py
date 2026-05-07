@@ -2,11 +2,18 @@ from flask import Flask, request, jsonify, render_template_string, session, redi
 import os
 import re
 import secrets
+import sqlite3
 from datetime import datetime, timedelta
 from functools import wraps
 
-import psycopg2
-import psycopg2.extras
+try:
+    try:
+    import psycopg2
+    import psycopg2.extras
+except Exception:
+    psycopg2 = None
+except Exception:
+    psycopg2 = None
 
 
 app = Flask(__name__)
@@ -25,11 +32,13 @@ ADMIN_USERS = {
 }
 ADMIN_USERS = {u: p for u, p in ADMIN_USERS.items() if u and p}
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+DB_DIR = os.environ.get("DB_DIR", ".")
+os.makedirs(DB_DIR, exist_ok=True)
+SQLITE_DB = os.path.join(DB_DIR, "licenses.db")
 
 
 def using_postgres():
-    return True
+    return bool(DATABASE_URL and DATABASE_URL.startswith(("postgresql://", "postgres://")) and psycopg2 is not None)
 
 
 def now_utc():
@@ -37,40 +46,46 @@ def now_utc():
 
 
 def get_conn():
-    return psycopg2.connect(
-        DATABASE_URL,
-        cursor_factory=psycopg2.extras.RealDictCursor,
-        sslmode="require"
-    )
+    if using_postgres():
+        return psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    con = sqlite3.connect(SQLITE_DB)
+    con.row_factory = sqlite3.Row
+    return con
 
 
 def init_db():
     con = get_conn()
     cur = con.cursor()
-
     cur.execute("""
     CREATE TABLE IF NOT EXISTS licenses (
         license_key TEXT PRIMARY KEY,
         expires TEXT NOT NULL,
         hwid TEXT,
-        active BOOLEAN NOT NULL DEFAULT TRUE,
+        active INTEGER NOT NULL DEFAULT 1,
         created_at TEXT,
-        updated_at TEXT,
-        owner TEXT DEFAULT ''
+        updated_at TEXT
     )
     """)
-
-    cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_hwid ON licenses(hwid)")
-    cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_owner ON licenses(owner)")
-    cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_active ON licenses(active)")
-    cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_expires ON licenses(expires)")
-
+    if using_postgres():
+        cur.execute("ALTER TABLE licenses ADD COLUMN IF NOT EXISTS owner TEXT")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_hwid ON licenses(hwid)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_owner ON licenses(owner)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_active ON licenses(active)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_licenses_expires ON licenses(expires)")
+    else:
+        try:
+            cur.execute("PRAGMA table_info(licenses)")
+            cols = [row[1] for row in cur.fetchall()]
+            if "owner" not in cols:
+                cur.execute("ALTER TABLE licenses ADD COLUMN owner TEXT")
+        except Exception:
+            pass
     con.commit()
     con.close()
 
 
 def sql_params(query):
-    return query.replace("?", "%s")
+    return query.replace("?", "%s") if using_postgres() else query if using_postgres() else query
 
 
 def db_query(query, args=(), fetchone=False, fetchall=False):
@@ -803,7 +818,7 @@ h3{margin:0 0 14px;font-size:21px}
   background:rgba(7,7,8,.82);
   box-shadow:inset 0 0 42px rgba(0,0,0,.22);
 }
-table{width:100%;border-collapse:collapse;min-width:1180px;table-layout:auto}
+table{width:100%;border-collapse:collapse;min-width:1040px;table-layout:fixed}
 th,td{
   text-align:left;
   padding:15px 14px;
@@ -825,22 +840,7 @@ tr{transition:background .16s ease}
 tr:hover td{background:rgba(255,36,52,.045)}
 code{color:var(--red);font-weight:950;letter-spacing:.2px}
 .hwid{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c7c7cf}
-.owner{
-  min-width:230px;
-  width:230px;
-  color:#f5f5f7;
-  font-weight:850;
-  font-family:Consolas,monospace;
-  white-space:nowrap;
-  overflow:visible;
-  text-overflow:clip;
-  cursor:pointer;
-  transition:.18s ease;
-}
-.owner:hover{
-  color:#ff2434;
-  text-shadow:0 0 18px rgba(255,36,52,.35);
-}
+.owner{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#f5f5f7;font-weight:850}
 .check{width:19px;height:19px;accent-color:var(--red);min-width:0}
 .pill{display:inline-block;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:950;background:#17171b;border:1px solid rgba(255,255,255,.12)}
 .ok{color:#9effb7}.warn{color:#ffe08a}.bad{color:#ff9b9b}
