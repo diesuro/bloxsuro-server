@@ -373,7 +373,7 @@ body::before{
 }
 *::-webkit-scrollbar{width:10px;height:10px}
 *::-webkit-scrollbar-track{background:rgba(255,255,255,.035);border-radius:999px}
-*::-webkit-scrollbar-thumb{background:rgba(255,36,52,.45);border-radius:999px;border:2px solid rgba(0,0,0,.35)}
+*::-webkit-scrollbar-thumb{background:rgba(255,36,52,.45);border-radius:6px;border:2px solid rgba(0,0,0,.35)}
 .brand{display:flex;align-items:center;gap:16px}
 .brand img{
   width:66px;
@@ -398,7 +398,7 @@ h1{
 button,input,select{font-family:inherit}
 input,select{
   height:50px;
-  border-radius:15px;
+  border-radius:6px;
   border:1px solid rgba(255,255,255,.14);
   background:#050506;
   color:var(--text);
@@ -415,7 +415,7 @@ input:focus,select:focus{
 }
 button{
   height:50px;
-  border-radius:15px;
+  border-radius:6px;
   border:1px solid rgba(255,36,52,.78);
   background:transparent;
   color:var(--red);
@@ -445,7 +445,7 @@ button:disabled{opacity:.45;cursor:wait;transform:none}
 .card{
   background:linear-gradient(180deg,rgba(23,23,28,.88),rgba(9,9,12,.92));
   border:1px solid var(--border);
-  border-radius:28px;
+  border-radius:12px;
   padding:24px;
   box-shadow:0 26px 80px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.04);
   backdrop-filter:blur(18px);
@@ -472,7 +472,7 @@ button:disabled{opacity:.45;cursor:wait;transform:none}
   position:fixed;right:24px;bottom:24px;
   background:#111114;
   border:1px solid rgba(255,36,52,.42);
-  border-radius:16px;
+  border-radius:8px;
   padding:14px 17px;
   color:var(--text);
   font-weight:950;
@@ -490,7 +490,7 @@ button:disabled{opacity:.45;cursor:wait;transform:none}
   background:#111114;
   color:var(--text);
   border:1px solid rgba(255,36,52,.33);
-  border-radius:14px;
+  border-radius:6px;
   padding:10px 12px;
   font-size:12px;
   font-weight:850;
@@ -503,6 +503,20 @@ button:disabled{opacity:.45;cursor:wait;transform:none}
   word-break:break-all;
 }
 .tooltip.show{opacity:1;transform:translateY(0)}
+
+button,input,select{
+  border-radius:6px !important;
+}
+.card{
+  border-radius:12px !important;
+}
+.tablewrap{
+  border-radius:10px !important;
+}
+.pill,.badge,.copybtn,.toast{
+  border-radius:6px !important;
+}
+
 </style>
 """
 
@@ -530,6 +544,8 @@ LOGIN_HTML = """
   to{opacity:1;transform:translateY(0) scale(1)}
 }
 .login .sub{margin-left:82px;margin-bottom:26px}
+.login input{width:100%}
+.login .passbox{width:100%}
 label{
   display:block;
   margin:15px 0 8px;
@@ -537,19 +553,28 @@ label{
   font-size:13px;
   font-weight:850;
 }
-.passbox{position:relative}
-.passbox input{padding-right:58px}
+.passbox{position:relative;width:100%}
+.passbox input{padding-right:58px;width:100%}
 .eye{
   position:absolute;
   right:8px;
-  top:7px;
+  top:50%;
+  transform:translateY(-50%);
   width:38px;
-  height:36px;
+  height:34px;
+  min-width:38px;
+  padding:0;
+  display:grid;
+  place-items:center;
   border-color:rgba(255,255,255,.12);
   color:#fff;
   background:rgba(255,255,255,.035);
+  line-height:1;
 }
-.eye:hover{background:rgba(255,255,255,.08)}
+.eye:hover{
+  background:rgba(255,255,255,.08);
+  transform:translateY(-50%) scale(1.04);
+}
 .btn{
   width:100%;
   margin-top:23px;
@@ -562,7 +587,7 @@ label{
   display:none;
   margin-top:14px;
   padding:13px;
-  border-radius:14px;
+  border-radius:6px;
   background:rgba(255,36,52,.08);
   border:1px solid rgba(255,36,52,.32);
   color:#ffd8dc;
@@ -659,7 +684,7 @@ ADMIN_HTML = """
   border:1px solid rgba(255,36,52,.30);
   background:rgba(16,16,20,.76);
   color:var(--red);
-  border-radius:999px;
+  border-radius:6px;
   padding:12px 17px;
   font-weight:950;
   font-size:14px;
@@ -685,7 +710,7 @@ h3{margin:0 0 14px;font-size:21px}
   max-height:620px;
   overflow-y:auto;
   border:1px solid rgba(255,255,255,.12);
-  border-radius:22px;
+  border-radius:10px;
   background:rgba(7,7,8,.82);
   box-shadow:inset 0 0 42px rgba(0,0,0,.22);
 }
@@ -710,11 +735,13 @@ tr:hover td{background:rgba(255,36,52,.045)}
 code{color:var(--red);font-weight:950;letter-spacing:.2px}
 .hwid{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c7c7cf}
 .check{width:19px;height:19px;accent-color:var(--red);min-width:0}
-.pill{display:inline-block;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:950;background:#17171b;border:1px solid rgba(255,255,255,.12)}
+.pill{display:inline-block;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:950;background:#17171b;border:1px solid rgba(255,255,255,.12)}
 .ok{color:#9effb7}.warn{color:#ffe08a}.bad{color:#ff9b9b}
 .keycell{display:flex;align-items:center;gap:9px}
 .copybtn{height:31px;padding:0 10px;border-radius:10px;font-size:11px;color:var(--text);border-color:rgba(255,255,255,.14);background:#111114}
 .copybtn:hover{border-color:rgba(255,36,52,.7);color:var(--red)}
+#revealBtn{min-width:128px}
+.keycell code{min-width:150px;display:inline-block}
 .logout{color:var(--text);border-color:rgba(255,255,255,.14)}
 @media(max-width:950px){
   .grid{grid-template-columns:1fr}
@@ -779,6 +806,7 @@ code{color:var(--red);font-weight:950;letter-spacing:.2px}
               <option value="unbound">Unbound</option>
             </select>
           </div>
+          <button id="revealBtn" onclick="toggleRevealKeys()" title="Show / hide license keys">👁 Show Keys</button>
           <button id="refreshBtn" onclick="loadKeys()">Refresh</button>
         </div>
 
@@ -809,6 +837,7 @@ code{color:var(--red);font-weight:950;letter-spacing:.2px}
 let allKeys=[];
 let loading=false;
 let renderTimer=null;
+let revealKeys=false;
 
 document.addEventListener("pointermove",(event)=>{
   const x=event.clientX/window.innerWidth;
@@ -898,6 +927,19 @@ function debouncedRender(){
 function escapeHtml(value){
   return String(value??"").replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[s]));
 }
+function maskKey(key){
+  const raw = String(key || "");
+  if (raw.length <= 9) return "••••••";
+  return raw.slice(0, 5) + "••••••••" + raw.slice(-4);
+}
+
+function toggleRevealKeys(){
+  revealKeys = !revealKeys;
+  const btn = document.getElementById("revealBtn");
+  if (btn) btn.textContent = revealKeys ? "🙈 Hide Keys" : "👁 Show Keys";
+  renderKeys();
+}
+
 function renderKeys(){
   const tbody=document.getElementById("keys");
   const keys=filteredKeys();
@@ -909,12 +951,15 @@ function renderKeys(){
   for(const item of keys){
     const tr=document.createElement("tr");
     const fullHwid=item.hwid||"Not bound";
-    const safeKey=escapeHtml(item.key);
+    const rawKey=String(item.key || "");
+    const safeKey=escapeHtml(rawKey);
+    const displayKey=escapeHtml(revealKeys ? rawKey : maskKey(rawKey));
     const safeHwid=escapeHtml(fullHwid);
     tr.innerHTML=`
       <td><input class="check keyCheck" type="checkbox" value="${safeKey}"></td>
-      <td><div class="keycell" onmousemove="tooltip(event,'${safeKey}')" onmouseleave="hideTooltip()">
-        <code>${safeKey}</code><button class="copybtn" onclick="copyKey(event,'${safeKey}')">Copy</button>
+      <td><div class="keycell" onmousemove="tooltip(event, revealKeys ? '${safeKey}' : 'Key hidden')" onmouseleave="hideTooltip()">
+        <code>${displayKey}</code>
+        <button class="copybtn" onclick="copyKey(event,'${safeKey}')">Copy</button>
       </div></td>
       <td><span class="pill ${statusClass(item.status)}">${escapeHtml(item.status)}</span></td>
       <td>${escapeHtml(item.remaining)}</td>
