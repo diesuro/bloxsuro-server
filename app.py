@@ -373,19 +373,20 @@ LOGIN_HTML = """
 <html>
 <head>
     <title>BLOXSURO Login</title>
+    <link rel="icon" href="/static/Logo%20Bloxsuro.png">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         :root {
-            --red: #ff1f2d;
-            --red2: #ff4050;
-            --bg: #020203;
-            --surface: rgba(8,8,11,.78);
-            --card: rgba(18,18,22,.82);
-            --card2: rgba(11,11,14,.94);
-            --border: rgba(255,255,255,.12);
-            --text: #f5f5f7;
-            --muted: #a8a8b4;
-            --glow: rgba(255,31,45,.16);
+            --red: #111111;
+            --red2: #333333;
+            --bg: #f4f4f4;
+            --surface: rgba(255,255,255,.86);
+            --card: rgba(255,255,255,.92);
+            --card2: rgba(250,250,250,.96);
+            --border: rgba(0,0,0,.14);
+            --text: #111111;
+            --muted: #555555;
+            --glow: rgba(0,0,0,.10);
         }
 
         * { box-sizing: border-box; }
@@ -399,10 +400,7 @@ LOGIN_HTML = """
             margin: 0;
             color: var(--text);
             font-family: Segoe UI, Arial, sans-serif;
-            background:
-                radial-gradient(circle at var(--mx, 18%) var(--my, 0%), rgba(255,31,45,.24), transparent 28%),
-                radial-gradient(circle at calc(100% - var(--mx, 18%)) 12%, rgba(255,31,45,.10), transparent 24%),
-                linear-gradient(180deg, #0b0508 0%, #030304 48%, #080204 100%);
+            background: linear-gradient(180deg, #ffffff 0%, #f4f4f4 100%);
             background-attachment: fixed;
             overflow-x: hidden;
         }
@@ -413,7 +411,7 @@ LOGIN_HTML = """
             inset: -20%;
             background:
                 linear-gradient(115deg, transparent 0%, rgba(255,255,255,.035) 48%, transparent 52%),
-                radial-gradient(circle at 20% 25%, rgba(255,31,45,.08), transparent 32%);
+                radial-gradient(circle at 20% 25%, rgba(0,0,0,.08), transparent 32%);
             transform: translate3d(calc(var(--px, 0) * 1px), calc(var(--py, 0) * 1px), 0);
             pointer-events: none;
             opacity: .85;
@@ -427,12 +425,12 @@ LOGIN_HTML = """
 
         *::-webkit-scrollbar-track {
             background: rgba(255,255,255,.035);
-            border-radius: 999px;
+            border-radius: 4px;
         }
 
         *::-webkit-scrollbar-thumb {
-            background: rgba(255,31,45,.42);
-            border-radius: 999px;
+            background: rgba(0,0,0,.42);
+            border-radius: 4px;
             border: 2px solid rgba(0,0,0,.25);
         }
 
@@ -462,7 +460,7 @@ LOGIN_HTML = """
             letter-spacing: 1px;
             font-size: clamp(36px, 3vw, 46px);
             line-height: 1;
-            text-shadow: 0 0 34px rgba(255,31,45,.26);
+            text-shadow: 0 0 34px rgba(0,0,0,.26);
         }
 
         .muted {
@@ -479,14 +477,14 @@ LOGIN_HTML = """
         }
 
         .badge {
-            border: 1px solid rgba(255,31,45,.30);
+            border: 1px solid rgba(0,0,0,.30);
             background: rgba(16,16,20,.74);
             color: var(--red);
-            border-radius: 999px;
+            border-radius: 4px;
             padding: 12px 17px;
             font-weight: 900;
             font-size: 14px;
-            box-shadow: inset 0 0 30px rgba(255,31,45,.035), 0 16px 42px rgba(0,0,0,.18);
+            box-shadow: inset 0 0 30px rgba(0,0,0,.035), 0 16px 42px rgba(0,0,0,.18);
             backdrop-filter: blur(14px);
         }
 
@@ -506,10 +504,10 @@ LOGIN_HTML = """
         .card {
             background: linear-gradient(180deg, rgba(20,20,24,.86), rgba(10,10,13,.90));
             border: 1px solid var(--border);
-            border-radius: 28px;
+            border-radius: 4px;
             padding: 22px;
             margin-bottom: 20px;
-            box-shadow: 0 22px 70px rgba(0,0,0,.36), 0 0 58px rgba(255,31,45,.045);
+            box-shadow: 0 22px 70px rgba(0,0,0,.36), 0 0 58px rgba(0,0,0,.045);
             transition:
                 transform .22s cubic-bezier(.2,.8,.2,1),
                 border-color .22s ease,
@@ -524,15 +522,15 @@ LOGIN_HTML = """
             content: "";
             position: absolute;
             inset: 0;
-            background: radial-gradient(circle at var(--cardx, 50%) var(--cardy, 0%), rgba(255,31,45,.10), transparent 34%);
+            background: radial-gradient(circle at var(--cardx, 50%) var(--cardy, 0%), rgba(0,0,0,.10), transparent 34%);
             opacity: 0;
             transition: opacity .22s ease;
             pointer-events: none;
         }
 
         .card:hover {
-            border-color: rgba(255,31,45,.42);
-            box-shadow: 0 30px 90px rgba(0,0,0,.46), 0 0 86px rgba(255,31,45,.10);
+            border-color: rgba(0,0,0,.42);
+            box-shadow: 0 30px 90px rgba(0,0,0,.46), 0 0 86px rgba(0,0,0,.10);
             transform: translateY(-3px);
         }
 
@@ -549,8 +547,8 @@ LOGIN_HTML = """
         input, select {
             background: rgba(5,5,6,.92);
             color: var(--text);
-            border: 1px solid #34343c;
-            border-radius: 15px;
+            border: 1px solid #cfcfcf;
+            border-radius: 4px;
             padding: 0 14px;
             outline: none;
             min-width: 230px;
@@ -562,7 +560,7 @@ LOGIN_HTML = """
 
         input:focus, select:focus {
             border-color: var(--red);
-            box-shadow: 0 0 0 4px rgba(255,31,45,.12), 0 0 30px rgba(255,31,45,.08);
+            box-shadow: 0 0 0 4px rgba(0,0,0,.12), 0 0 30px rgba(0,0,0,.08);
             transform: translateY(-1px);
         }
 
@@ -570,7 +568,7 @@ LOGIN_HTML = """
             background: transparent;
             color: var(--red);
             border: 1px solid var(--red);
-            border-radius: 15px;
+            border-radius: 4px;
             padding: 0 17px;
             font-weight: 900;
             cursor: pointer;
@@ -595,9 +593,9 @@ LOGIN_HTML = """
         }
 
         button:hover {
-            background: rgba(255,31,45,.10);
+            background: rgba(0,0,0,.10);
             transform: translateY(-2px);
-            box-shadow: 0 16px 40px rgba(255,31,45,.13);
+            box-shadow: 0 16px 40px rgba(0,0,0,.13);
         }
 
         button:hover::before {
@@ -639,8 +637,8 @@ LOGIN_HTML = """
             overflow-x: auto;
             max-height: 620px;
             overflow-y: auto;
-            border: 1px solid #26262d;
-            border-radius: 22px;
+            border: 1px solid #d8d8d8;
+            border-radius: 4px;
             background: rgba(7,7,8,.82);
             box-shadow: inset 0 0 42px rgba(0,0,0,.22);
         }
@@ -654,7 +652,7 @@ LOGIN_HTML = """
         th, td {
             text-align: left;
             padding: 15px 14px;
-            border-bottom: 1px solid #202027;
+            border-bottom: 1px solid #e1e1e1;
             font-size: 15px;
             vertical-align: middle;
         }
@@ -673,7 +671,7 @@ LOGIN_HTML = """
         }
 
         tr:hover td {
-            background: rgba(255,31,45,.045);
+            background: rgba(0,0,0,.045);
         }
 
         code {
@@ -687,7 +685,7 @@ LOGIN_HTML = """
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            color: #b5b5c0;
+            color: #444444;
         }
 
         .check {
@@ -699,12 +697,12 @@ LOGIN_HTML = """
 
         .pill {
             display: inline-block;
-            border-radius: 999px;
+            border-radius: 4px;
             padding: 6px 12px;
             font-size: 12px;
             font-weight: 900;
-            background: #17171b;
-            border: 1px solid #303038;
+            background: #f1f1f1;
+            border: 1px solid #d0d0d0;
             box-shadow: inset 0 0 28px rgba(255,255,255,.025);
         }
 
@@ -717,11 +715,11 @@ LOGIN_HTML = """
         .copybtn {
             height: 31px;
             padding: 0 10px;
-            border-radius: 10px;
+            border-radius: 4px;
             font-size: 11px;
             color: var(--text);
-            border-color: #34343c;
-            background: #111114;
+            border-color: #cfcfcf;
+            background: #ffffff;
         }
 
         .copybtn:hover {
@@ -733,9 +731,9 @@ LOGIN_HTML = """
             position: fixed;
             right: 24px;
             bottom: 24px;
-            background: #111114;
+            background: #ffffff;
             border: 1px solid var(--red);
-            border-radius: 16px;
+            border-radius: 4px;
             padding: 13px 16px;
             color: var(--text);
             font-weight: 900;
@@ -743,7 +741,7 @@ LOGIN_HTML = """
             transform: translateY(10px);
             transition: .18s ease;
             pointer-events: none;
-            box-shadow: 0 16px 50px rgba(0,0,0,.42), 0 0 36px rgba(255,31,45,.12);
+            box-shadow: 0 16px 50px rgba(0,0,0,.42), 0 0 36px rgba(0,0,0,.12);
             z-index: 30;
         }
 
@@ -755,10 +753,10 @@ LOGIN_HTML = """
         .tooltip {
             position: fixed;
             max-width: 540px;
-            background: #111114;
+            background: #ffffff;
             color: var(--text);
-            border: 1px solid rgba(255,31,45,.33);
-            border-radius: 13px;
+            border: 1px solid rgba(0,0,0,.33);
+            border-radius: 4px;
             padding: 10px 12px;
             font-size: 12px;
             font-weight: 800;
@@ -778,7 +776,20 @@ LOGIN_HTML = """
 
         .logout {
             color: var(--text);
-            border-color: #34343c;
+            border-color: #cfcfcf;
+        }
+
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .brand img {
+            width: 58px;
+            height: 58px;
+            object-fit: contain;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,.14));
         }
 
         @media (max-width: 950px) {
@@ -797,7 +808,10 @@ LOGIN_HTML = """
 <body>
 <div class="orb"></div>
 <div class="login">
-    <h1>BLOXSURO</h1>
+    <div class="brand">
+        <img src="/static/Logo%20Bloxsuro.png" alt="BLOXSURO Logo">
+        <h1>BLOXSURO</h1>
+    </div>
     <div class="sub">Admin panel login</div>
 
     <label>Username</label>
@@ -857,19 +871,20 @@ ADMIN_HTML = """
 <html>
 <head>
     <title>BLOXSURO Admin</title>
+    <link rel="icon" href="/static/Logo%20Bloxsuro.png">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         :root {
-            --red: #ff1f2d;
-            --red2: #ff4050;
-            --bg: #020203;
-            --surface: rgba(8,8,11,.78);
-            --card: rgba(18,18,22,.82);
-            --card2: rgba(11,11,14,.94);
-            --border: rgba(255,255,255,.12);
-            --text: #f5f5f7;
-            --muted: #a8a8b4;
-            --glow: rgba(255,31,45,.16);
+            --red: #111111;
+            --red2: #333333;
+            --bg: #f4f4f4;
+            --surface: rgba(255,255,255,.86);
+            --card: rgba(255,255,255,.92);
+            --card2: rgba(250,250,250,.96);
+            --border: rgba(0,0,0,.14);
+            --text: #111111;
+            --muted: #555555;
+            --glow: rgba(0,0,0,.10);
         }
 
         * { box-sizing: border-box; }
@@ -883,10 +898,7 @@ ADMIN_HTML = """
             margin: 0;
             color: var(--text);
             font-family: Segoe UI, Arial, sans-serif;
-            background:
-                radial-gradient(circle at var(--mx, 18%) var(--my, 0%), rgba(255,31,45,.24), transparent 28%),
-                radial-gradient(circle at calc(100% - var(--mx, 18%)) 12%, rgba(255,31,45,.10), transparent 24%),
-                linear-gradient(180deg, #0b0508 0%, #030304 48%, #080204 100%);
+            background: linear-gradient(180deg, #ffffff 0%, #f4f4f4 100%);
             background-attachment: fixed;
             overflow-x: hidden;
         }
@@ -897,7 +909,7 @@ ADMIN_HTML = """
             inset: -20%;
             background:
                 linear-gradient(115deg, transparent 0%, rgba(255,255,255,.035) 48%, transparent 52%),
-                radial-gradient(circle at 20% 25%, rgba(255,31,45,.08), transparent 32%);
+                radial-gradient(circle at 20% 25%, rgba(0,0,0,.08), transparent 32%);
             transform: translate3d(calc(var(--px, 0) * 1px), calc(var(--py, 0) * 1px), 0);
             pointer-events: none;
             opacity: .85;
@@ -911,12 +923,12 @@ ADMIN_HTML = """
 
         *::-webkit-scrollbar-track {
             background: rgba(255,255,255,.035);
-            border-radius: 999px;
+            border-radius: 4px;
         }
 
         *::-webkit-scrollbar-thumb {
-            background: rgba(255,31,45,.42);
-            border-radius: 999px;
+            background: rgba(0,0,0,.42);
+            border-radius: 4px;
             border: 2px solid rgba(0,0,0,.25);
         }
 
@@ -946,7 +958,7 @@ ADMIN_HTML = """
             letter-spacing: 1px;
             font-size: clamp(36px, 3vw, 46px);
             line-height: 1;
-            text-shadow: 0 0 34px rgba(255,31,45,.26);
+            text-shadow: 0 0 34px rgba(0,0,0,.26);
         }
 
         .muted {
@@ -963,14 +975,14 @@ ADMIN_HTML = """
         }
 
         .badge {
-            border: 1px solid rgba(255,31,45,.30);
+            border: 1px solid rgba(0,0,0,.30);
             background: rgba(16,16,20,.74);
             color: var(--red);
-            border-radius: 999px;
+            border-radius: 4px;
             padding: 12px 17px;
             font-weight: 900;
             font-size: 14px;
-            box-shadow: inset 0 0 30px rgba(255,31,45,.035), 0 16px 42px rgba(0,0,0,.18);
+            box-shadow: inset 0 0 30px rgba(0,0,0,.035), 0 16px 42px rgba(0,0,0,.18);
             backdrop-filter: blur(14px);
         }
 
@@ -990,10 +1002,10 @@ ADMIN_HTML = """
         .card {
             background: linear-gradient(180deg, rgba(20,20,24,.86), rgba(10,10,13,.90));
             border: 1px solid var(--border);
-            border-radius: 28px;
+            border-radius: 4px;
             padding: 22px;
             margin-bottom: 20px;
-            box-shadow: 0 22px 70px rgba(0,0,0,.36), 0 0 58px rgba(255,31,45,.045);
+            box-shadow: 0 22px 70px rgba(0,0,0,.36), 0 0 58px rgba(0,0,0,.045);
             transition:
                 transform .22s cubic-bezier(.2,.8,.2,1),
                 border-color .22s ease,
@@ -1008,15 +1020,15 @@ ADMIN_HTML = """
             content: "";
             position: absolute;
             inset: 0;
-            background: radial-gradient(circle at var(--cardx, 50%) var(--cardy, 0%), rgba(255,31,45,.10), transparent 34%);
+            background: radial-gradient(circle at var(--cardx, 50%) var(--cardy, 0%), rgba(0,0,0,.10), transparent 34%);
             opacity: 0;
             transition: opacity .22s ease;
             pointer-events: none;
         }
 
         .card:hover {
-            border-color: rgba(255,31,45,.42);
-            box-shadow: 0 30px 90px rgba(0,0,0,.46), 0 0 86px rgba(255,31,45,.10);
+            border-color: rgba(0,0,0,.42);
+            box-shadow: 0 30px 90px rgba(0,0,0,.46), 0 0 86px rgba(0,0,0,.10);
             transform: translateY(-3px);
         }
 
@@ -1033,8 +1045,8 @@ ADMIN_HTML = """
         input, select {
             background: rgba(5,5,6,.92);
             color: var(--text);
-            border: 1px solid #34343c;
-            border-radius: 15px;
+            border: 1px solid #cfcfcf;
+            border-radius: 4px;
             padding: 0 14px;
             outline: none;
             min-width: 230px;
@@ -1046,7 +1058,7 @@ ADMIN_HTML = """
 
         input:focus, select:focus {
             border-color: var(--red);
-            box-shadow: 0 0 0 4px rgba(255,31,45,.12), 0 0 30px rgba(255,31,45,.08);
+            box-shadow: 0 0 0 4px rgba(0,0,0,.12), 0 0 30px rgba(0,0,0,.08);
             transform: translateY(-1px);
         }
 
@@ -1054,7 +1066,7 @@ ADMIN_HTML = """
             background: transparent;
             color: var(--red);
             border: 1px solid var(--red);
-            border-radius: 15px;
+            border-radius: 4px;
             padding: 0 17px;
             font-weight: 900;
             cursor: pointer;
@@ -1079,9 +1091,9 @@ ADMIN_HTML = """
         }
 
         button:hover {
-            background: rgba(255,31,45,.10);
+            background: rgba(0,0,0,.10);
             transform: translateY(-2px);
-            box-shadow: 0 16px 40px rgba(255,31,45,.13);
+            box-shadow: 0 16px 40px rgba(0,0,0,.13);
         }
 
         button:hover::before {
@@ -1123,8 +1135,8 @@ ADMIN_HTML = """
             overflow-x: auto;
             max-height: 620px;
             overflow-y: auto;
-            border: 1px solid #26262d;
-            border-radius: 22px;
+            border: 1px solid #d8d8d8;
+            border-radius: 4px;
             background: rgba(7,7,8,.82);
             box-shadow: inset 0 0 42px rgba(0,0,0,.22);
         }
@@ -1138,7 +1150,7 @@ ADMIN_HTML = """
         th, td {
             text-align: left;
             padding: 15px 14px;
-            border-bottom: 1px solid #202027;
+            border-bottom: 1px solid #e1e1e1;
             font-size: 15px;
             vertical-align: middle;
         }
@@ -1157,7 +1169,7 @@ ADMIN_HTML = """
         }
 
         tr:hover td {
-            background: rgba(255,31,45,.045);
+            background: rgba(0,0,0,.045);
         }
 
         code {
@@ -1171,7 +1183,7 @@ ADMIN_HTML = """
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            color: #b5b5c0;
+            color: #444444;
         }
 
         .check {
@@ -1183,12 +1195,12 @@ ADMIN_HTML = """
 
         .pill {
             display: inline-block;
-            border-radius: 999px;
+            border-radius: 4px;
             padding: 6px 12px;
             font-size: 12px;
             font-weight: 900;
-            background: #17171b;
-            border: 1px solid #303038;
+            background: #f1f1f1;
+            border: 1px solid #d0d0d0;
             box-shadow: inset 0 0 28px rgba(255,255,255,.025);
         }
 
@@ -1201,11 +1213,11 @@ ADMIN_HTML = """
         .copybtn {
             height: 31px;
             padding: 0 10px;
-            border-radius: 10px;
+            border-radius: 4px;
             font-size: 11px;
             color: var(--text);
-            border-color: #34343c;
-            background: #111114;
+            border-color: #cfcfcf;
+            background: #ffffff;
         }
 
         .copybtn:hover {
@@ -1217,9 +1229,9 @@ ADMIN_HTML = """
             position: fixed;
             right: 24px;
             bottom: 24px;
-            background: #111114;
+            background: #ffffff;
             border: 1px solid var(--red);
-            border-radius: 16px;
+            border-radius: 4px;
             padding: 13px 16px;
             color: var(--text);
             font-weight: 900;
@@ -1227,7 +1239,7 @@ ADMIN_HTML = """
             transform: translateY(10px);
             transition: .18s ease;
             pointer-events: none;
-            box-shadow: 0 16px 50px rgba(0,0,0,.42), 0 0 36px rgba(255,31,45,.12);
+            box-shadow: 0 16px 50px rgba(0,0,0,.42), 0 0 36px rgba(0,0,0,.12);
             z-index: 30;
         }
 
@@ -1239,10 +1251,10 @@ ADMIN_HTML = """
         .tooltip {
             position: fixed;
             max-width: 540px;
-            background: #111114;
+            background: #ffffff;
             color: var(--text);
-            border: 1px solid rgba(255,31,45,.33);
-            border-radius: 13px;
+            border: 1px solid rgba(0,0,0,.33);
+            border-radius: 4px;
             padding: 10px 12px;
             font-size: 12px;
             font-weight: 800;
@@ -1262,7 +1274,20 @@ ADMIN_HTML = """
 
         .logout {
             color: var(--text);
-            border-color: #34343c;
+            border-color: #cfcfcf;
+        }
+
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .brand img {
+            width: 58px;
+            height: 58px;
+            object-fit: contain;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,.14));
         }
 
         @media (max-width: 950px) {
@@ -1282,7 +1307,10 @@ ADMIN_HTML = """
 <div class="wrap">
     <div class="topbar">
         <div>
-            <h1>BLOXSURO Admin</h1>
+            <div class="brand">
+                <img src="/static/Logo%20Bloxsuro.png" alt="BLOXSURO Logo">
+                <h1>BLOXSURO Admin</h1>
+            </div>
             <div class="muted">License panel • online database • secure admin login</div>
         </div>
         <div class="top-actions">
