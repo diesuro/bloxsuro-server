@@ -51,6 +51,7 @@ DB_MODE = None
 # Lightweight in-memory rate limiter. Works well on a single Render instance.
 # For multiple instances, move this to Redis later.
 RATE_BUCKETS = {}
+LAST_USED_UPDATE_COOLDOWN_MINUTES = int(os.environ.get("LAST_USED_UPDATE_COOLDOWN_MINUTES", "60") or "60")
 
 
 def client_ip():
@@ -322,13 +323,16 @@ def verify():
     key = str(data.get("key", "")).strip()
     hwid = str(data.get("hwid", "")).strip()
 
+    # Last Used is tracked only by the server.
+    # It updates on the first successful verification and then at most once per cooldown window.
+
     if not key or not hwid:
         return jsonify({"valid": False, "reason": "Missing key or HWID"}), 400
     if len(key) > 80 or len(hwid) > 256:
         return jsonify({"valid": False, "reason": "Invalid request"}), 400
 
     row = db_query(
-        "SELECT license_key, expires, hwid, active FROM licenses WHERE license_key=?",
+        "SELECT license_key, expires, hwid, active, last_verified_at FROM licenses WHERE license_key=?",
         (key,),
         fetchone=True,
     )
@@ -354,15 +358,38 @@ def verify():
     if saved_hwid and saved_hwid != hwid:
         return jsonify({"valid": False, "reason": "Different computer"})
 
-    if not saved_hwid:
-        db_query(
-            "UPDATE licenses SET hwid=?, updated_at=?, last_verified_at=?, verify_count=COALESCE(verify_count,0)+1 WHERE license_key=?",
-            (hwid, now_utc().isoformat(), now_utc().isoformat(), key),
-        )
+    now_dt = now_utc()
+    now_iso = now_dt.isoformat()
+
+    # Server-only Last Used tracking with cooldown.
+    # This keeps the existing app build compatible and prevents repeated watchdog checks from overloading the DB.
+    should_track_usage = False
+    last_verified_raw = str(row.get("last_verified_at") or "").strip()
+    if not last_verified_raw:
+        should_track_usage = True
     else:
+        try:
+            last_verified_dt = datetime.fromisoformat(last_verified_raw)
+            elapsed_minutes = (now_dt - last_verified_dt).total_seconds() / 60
+            should_track_usage = elapsed_minutes >= LAST_USED_UPDATE_COOLDOWN_MINUTES
+        except Exception:
+            should_track_usage = True
+
+    if not saved_hwid:
+        if should_track_usage:
+            db_query(
+                "UPDATE licenses SET hwid=?, updated_at=?, last_verified_at=?, verify_count=COALESCE(verify_count,0)+1 WHERE license_key=?",
+                (hwid, now_iso, now_iso, key),
+            )
+        else:
+            db_query(
+                "UPDATE licenses SET hwid=?, updated_at=? WHERE license_key=?",
+                (hwid, now_iso, key),
+            )
+    elif should_track_usage:
         db_query(
             "UPDATE licenses SET last_verified_at=?, verify_count=COALESCE(verify_count,0)+1 WHERE license_key=?",
-            (now_utc().isoformat(), key),
+            (now_iso, key),
         )
 
     remaining = expire_date - now_utc()
@@ -805,7 +832,7 @@ ADMIN_HTML = """
 <meta name="csrf-token" content="{{ csrf }}">
 """ + STYLE + """
 <style>
-.wrap{width:min(1440px,calc(100vw - 56px));margin:0 auto;padding:38px 0 72px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:28px;margin-bottom:26px;animation:fadeDown .34s ease both}@keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}.top-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.badge{border:1px solid rgba(255,255,255,.18);background:rgba(16,16,16,.78);color:#fff;padding:13px 18px;font-weight:820;font-size:13px;box-shadow:inset 0 0 30px rgba(255,255,255,.025),0 16px 42px rgba(0,0,0,.18);backdrop-filter:blur(14px)}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:24px}.stat{padding:20px 22px;min-height:96px;display:flex;flex-direction:column;justify-content:center}.stat .num{font-size:30px;font-weight:920;letter-spacing:-.5px}.stat .label{color:var(--muted);font-size:12px;font-weight:780;margin-top:6px;text-transform:uppercase;letter-spacing:.55px}.stat.active .label{color:var(--green)}.stat.disabled .label{color:var(--red)}.stat.expired .label{color:var(--amber)}.grid{display:grid;grid-template-columns:340px minmax(0,1fr);gap:24px;align-items:start;animation:fadeUp .4s ease both}@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}h3{margin:0 0 20px;font-size:20px;letter-spacing:-.2px}.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.field{display:flex;flex-direction:column;gap:9px;margin-bottom:18px}.field label{font-size:12px;color:#d7d7d7;font-weight:820;text-transform:uppercase;letter-spacing:.55px}.field input,.field select{width:100%}.stack{display:flex;flex-direction:column;gap:20px}.toolbar{display:grid;grid-template-columns:minmax(280px,1fr) 150px 180px 112px 112px;gap:12px;align-items:center;margin-bottom:18px}.toolbar input,.toolbar select,.toolbar button{width:100%}.tablewrap{overflow:auto;max-height:650px;border:1px solid rgba(255,255,255,.12);background:rgba(7,7,7,.84);box-shadow:inset 0 0 42px rgba(0,0,0,.22)}table{width:100%;border-collapse:collapse;min-width:980px;table-layout:fixed}th,td{text-align:left;padding:15px 14px;border-bottom:1px solid rgba(255,255,255,.075);font-size:13px;vertical-align:middle;overflow:hidden;text-overflow:ellipsis}th{color:var(--muted);background:rgba(13,13,13,.98);position:sticky;top:0;z-index:2;backdrop-filter:blur(10px);font-size:11px;text-transform:uppercase;letter-spacing:.6px}tr{transition:background .16s ease,transform .16s ease}tbody tr:hover td{background:rgba(255,255,255,.045)}code{color:#f2f2f2;font-weight:880;letter-spacing:.2px}.col-check{width:48px}.col-key{width:205px}.col-status{width:110px}.col-remain{width:110px}.col-owner{width:150px}.col-hwid{width:170px}.col-used{width:150px}.col-expires{width:145px}.hwid{white-space:nowrap;color:#c7c7c7}.owner{color:#f5f5f5;font-weight:780;font-family:Consolas,monospace;white-space:nowrap;cursor:pointer}.owner:hover{color:#fff;text-decoration:underline;text-decoration-color:var(--accent)}.check{width:17px;height:17px;accent-color:#f2f2f2;min-width:0;display:block;margin:0 auto}.pill{display:inline-block;padding:6px 10px;font-size:12px;font-weight:880;background:#171717;border:1px solid rgba(255,255,255,.13);min-width:76px;text-align:center}.ok{color:var(--green);border-color:rgba(191,255,208,.22);background:rgba(191,255,208,.035)}.warn{color:var(--amber);border-color:rgba(255,220,168,.22);background:rgba(255,220,168,.035)}.bad{color:var(--red);border-color:rgba(255,139,149,.24);background:rgba(255,56,72,.045)}.keycell{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;min-width:0}.keycell code{white-space:normal;line-height:1.25;word-break:break-word}.copybtn{height:32px;min-width:52px;padding:0 10px;font-size:11px;color:var(--text);border-color:rgba(255,255,255,.14);background:#111}.copybtn:hover{border-color:rgba(255,255,255,.56);color:#fff}.small{height:46px;font-size:12px}.logout{color:var(--text);border-color:rgba(255,255,255,.14)}.action-grid{display:grid;grid-template-columns:1fr;gap:12px}.action-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.help{font-size:12px;line-height:1.55;color:#929292;font-weight:650;margin-top:14px}.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.68);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:60;padding:22px}.modal-backdrop.show{display:flex}.modal{width:min(520px,100%);animation:modalPop .2s ease both}@keyframes modalPop{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}.progress{height:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:14px}.progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,#fff,var(--accent));transition:width .24s ease}.datecell{color:#b8b8b8;font-size:12px;line-height:1.3}.used-note{color:#777;font-size:11px;margin-top:2px}.empty{padding:28px;text-align:center;color:var(--muted);font-weight:760}.created-note{font-size:11px;color:#777;margin-top:3px}.accentline{height:1px;background:linear-gradient(90deg,transparent,rgba(255,56,72,.45),transparent);margin:18px 0}@media(max-width:1200px){.grid{grid-template-columns:1fr}.wrap{width:min(100% - 32px,980px);padding:28px 0 44px}.toolbar{grid-template-columns:1fr 150px 180px}.toolbar .small{min-width:0}.stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:640px){.stats{grid-template-columns:1fr}.topbar{align-items:flex-start;flex-direction:column}.top-actions{width:100%}.top-actions>*{flex:1}.brand-mark{width:56px;height:56px}.brand-mark img{width:38px;height:38px}.toolbar{grid-template-columns:1fr}.action-row{grid-template-columns:1fr}}
+.wrap{width:min(1440px,calc(100vw - 56px));margin:0 auto;padding:38px 0 72px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:28px;margin-bottom:26px;animation:fadeDown .34s ease both}@keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}.top-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.badge{border:1px solid rgba(255,255,255,.18);background:rgba(16,16,16,.78);color:#fff;padding:13px 18px;font-weight:820;font-size:13px;box-shadow:inset 0 0 30px rgba(255,255,255,.025),0 16px 42px rgba(0,0,0,.18);backdrop-filter:blur(14px)}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:24px}.stat{padding:20px 22px;min-height:96px;display:flex;flex-direction:column;justify-content:center}.stat .num{font-size:30px;font-weight:920;letter-spacing:-.5px}.stat .label{color:var(--muted);font-size:12px;font-weight:780;margin-top:6px;text-transform:uppercase;letter-spacing:.55px}.stat.active .label{color:var(--green)}.stat.disabled .label{color:var(--red)}.stat.expired .label{color:var(--amber)}.grid{display:grid;grid-template-columns:340px minmax(0,1fr);gap:24px;align-items:start;animation:fadeUp .4s ease both}@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}h3{margin:0 0 20px;font-size:20px;letter-spacing:-.2px}.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.field{display:flex;flex-direction:column;gap:9px;margin-bottom:18px}.field label{font-size:12px;color:#d7d7d7;font-weight:820;text-transform:uppercase;letter-spacing:.55px}.field input,.field select{width:100%}.stack{display:flex;flex-direction:column;gap:20px}.toolbar{display:grid;grid-template-columns:minmax(320px,1fr) 150px 180px 112px 96px 104px;gap:12px;align-items:center;margin-bottom:18px}.toolbar input,.toolbar select,.toolbar button{width:100%}.tablewrap{overflow:auto;max-height:650px;border:1px solid rgba(255,255,255,.12);background:rgba(7,7,7,.84);box-shadow:inset 0 0 42px rgba(0,0,0,.22)}table{width:100%;border-collapse:collapse;min-width:1180px;table-layout:fixed}th,td{text-align:left;padding:13px 14px;border-bottom:1px solid rgba(255,255,255,.075);font-size:13px;vertical-align:middle;overflow:hidden;text-overflow:ellipsis}th{color:var(--muted);background:rgba(13,13,13,.98);position:sticky;top:0;z-index:2;backdrop-filter:blur(10px);font-size:11px;text-transform:uppercase;letter-spacing:.6px}tr{transition:background .16s ease,transform .16s ease}tbody tr:hover td{background:rgba(255,255,255,.045)}code{color:#f2f2f2;font-weight:880;letter-spacing:.2px}.col-check{width:48px}.col-key{width:350px}.col-status{width:118px}.col-remain{width:108px}.col-owner{width:145px}.col-hwid{width:160px}.col-used{width:150px}.col-expires{width:145px}.hwid{white-space:nowrap;color:#c7c7c7}.owner{color:#f5f5f5;font-weight:780;font-family:Consolas,monospace;white-space:nowrap;cursor:pointer}.owner:hover{color:#fff;text-decoration:underline;text-decoration-color:var(--accent)}.check{width:17px;height:17px;accent-color:#f2f2f2;min-width:0;display:block;margin:0 auto}.pill{display:inline-block;padding:6px 10px;font-size:12px;font-weight:880;background:#171717;border:1px solid rgba(255,255,255,.13);min-width:76px;text-align:center}.ok{color:var(--green);border-color:rgba(191,255,208,.22);background:rgba(191,255,208,.035)}.warn{color:var(--amber);border-color:rgba(255,220,168,.22);background:rgba(255,220,168,.035)}.bad{color:var(--red);border-color:rgba(255,139,149,.24);background:rgba(255,56,72,.045)}.keycell{display:flex;align-items:center;gap:14px;min-width:0;width:100%}.key-code-wrap{min-width:0;flex:1;display:flex;flex-direction:column;justify-content:center}.keycell code{display:block;white-space:nowrap;line-height:1.2;word-break:normal;overflow:hidden;text-overflow:ellipsis;max-width:100%;font-size:13px}.copybtn{height:34px;min-width:58px;width:58px;padding:0 10px;font-size:11px;color:var(--text);border-color:rgba(255,255,255,.14);background:#111;flex:0 0 58px}.copybtn:hover{border-color:rgba(255,255,255,.56);color:#fff}.small{height:46px;font-size:12px}.logout{color:var(--text);border-color:rgba(255,255,255,.14)}.action-grid{display:grid;grid-template-columns:1fr;gap:12px}.action-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.help{font-size:12px;line-height:1.55;color:#929292;font-weight:650;margin-top:14px}.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.68);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:60;padding:22px}.modal-backdrop.show{display:flex}.modal{width:min(520px,100%);animation:modalPop .2s ease both}@keyframes modalPop{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.modal .field{margin-top:16px;margin-bottom:0}.modal input{width:100%}.progress{height:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:14px}.progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,#fff,var(--accent));transition:width .24s ease}.datecell{color:#b8b8b8;font-size:12px;line-height:1.3}.used-note{color:#777;font-size:11px;margin-top:2px}.empty{padding:28px;text-align:center;color:var(--muted);font-weight:760}.created-note{font-size:11px;color:#777;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.accentline{height:1px;background:linear-gradient(90deg,transparent,rgba(255,56,72,.45),transparent);margin:18px 0}@media(max-width:1200px){.grid{grid-template-columns:1fr}.wrap{width:min(100% - 32px,1080px);padding:28px 0 44px}.toolbar{grid-template-columns:1fr 150px 180px}.toolbar .small{min-width:0}.stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:640px){.stats{grid-template-columns:1fr}.topbar{align-items:flex-start;flex-direction:column}.top-actions{width:100%}.top-actions>*{flex:1}.brand-mark{width:56px;height:56px}.brand-mark img{width:38px;height:38px}.toolbar{grid-template-columns:1fr}.action-row{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -853,7 +880,7 @@ ADMIN_HTML = """
           <button class="danger" onclick="bulkAction('delete')">Delete Selected</button>
         </div>
         <div class="accentline"></div>
-        <div class="help">Renew Access activates selected licenses and sets expiration to now plus the duration above.</div>
+        <div class="help">Renew Access activates selected licenses and sets expiration to now plus the duration above.</div><div class="help">Last Used is tracked by the server with a 60 minute cooldown.</div>
       </div>
     </div>
 
@@ -879,9 +906,20 @@ ADMIN_HTML = """
           </select>
           <button class="secondary small" id="revealBtn" onclick="toggleRevealKeys()">Show Keys</button>
           <button class="secondary small" onclick="clearFilters()">Clear</button>
+          <button class="secondary small" id="refreshBtn" onclick="loadKeys()">Refresh</button>
         </div>
         <div class="tablewrap">
           <table>
+            <colgroup>
+              <col class="col-check">
+              <col class="col-key">
+              <col class="col-status">
+              <col class="col-remain">
+              <col class="col-owner">
+              <col class="col-hwid">
+              <col class="col-used">
+              <col class="col-expires">
+            </colgroup>
             <thead>
               <tr>
                 <th class="col-check"><input class="check" type="checkbox" id="selectAll" onchange="toggleAll()"></th>
@@ -914,11 +952,26 @@ ADMIN_HTML = """
   </div>
 </div>
 
+<div id="ownerModal" class="modal-backdrop">
+  <div class="card modal">
+    <h3>Update Owner</h3>
+    <div class="muted">Manual correction only. Normal owner linking should be handled by the Discord bot.</div>
+    <div class="field">
+      <label>Discord Owner ID</label>
+      <input id="ownerEditInput" placeholder="Discord ID or leave empty to unlink">
+    </div>
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeOwnerModal()">Cancel</button>
+      <button class="primary" onclick="saveOwnerEdit()">Save Owner</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast">Ready.</div>
 <div id="tooltip" class="tooltip"></div>
 
 <script>
-let allKeys=[];let loading=false;let renderTimer=null;let revealKeys=false;let pendingAction=null;
+let allKeys=[];let loading=false;let renderTimer=null;let revealKeys=false;let pendingAction=null;let pendingOwnerKey=null;
 const csrf=document.querySelector('meta[name="csrf-token"]').content;
 document.addEventListener("pointermove",event=>{const x=event.clientX/window.innerWidth;const y=event.clientY/window.innerHeight;document.body.style.setProperty("--mx",`${x*100}%`);document.body.style.setProperty("--my",`${y*100}%`);document.body.style.setProperty("--px",`${(x-.5)*18}`);document.body.style.setProperty("--py",`${(y-.5)*18}`);const card=event.target.closest?.(".card");if(card){const rect=card.getBoundingClientRect();card.style.setProperty("--cardx",`${((event.clientX-rect.left)/rect.width)*100}%`);card.style.setProperty("--cardy",`${((event.clientY-rect.top)/rect.height)*100}%`)}});
 function toast(message){const el=document.getElementById("toast");el.textContent=message;el.classList.add("show");clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>el.classList.remove("show"),2400)}
@@ -939,16 +992,18 @@ function timeValue(v){const t=Date.parse(v||"");return Number.isFinite(t)?t:0}
 function filteredKeys(){const sort=document.getElementById("sort").value;const arr=baseFiltered().slice();arr.sort((a,b)=>{if(sort==="created_asc")return timeValue(a.created_at||a.updated_at||a.expires)-timeValue(b.created_at||b.updated_at||b.expires);if(sort==="expires_desc")return timeValue(b.expires)-timeValue(a.expires);if(sort==="expires_asc")return timeValue(a.expires)-timeValue(b.expires);if(sort==="status")return String(a.status).localeCompare(String(b.status));return timeValue(b.created_at||b.updated_at||b.expires)-timeValue(a.created_at||a.updated_at||a.expires)});return arr}
 function debouncedRender(){clearTimeout(renderTimer);renderTimer=setTimeout(renderKeys,80)}
 function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[s]))}
-function maskKey(key){const raw=String(key||"");if(raw.length<=10)return "****";return raw.slice(0,5)+"-********-"+raw.slice(-4)}
+function maskKey(key){const raw=String(key||"");if(raw.length<=10)return "****";const prefix=raw.startsWith("BLOX-")?"BLOX":raw.slice(0,4);return prefix+"-********-"+raw.slice(-4)}
 function toggleRevealKeys(){revealKeys=!revealKeys;document.getElementById("revealBtn").textContent=revealKeys?"Hide Keys":"Show Keys";renderKeys()}
 function clearFilters(){document.getElementById("search").value="";document.getElementById("filter").value="all";document.getElementById("sort").value="created_desc";renderKeys()}
 function updateStats(keys){const total=keys.length;const active=keys.filter(k=>k.status==="Active").length;const disabled=keys.filter(k=>k.status==="Disabled").length;const expired=keys.filter(k=>k.status==="Expired").length;document.getElementById("statTotal").textContent=total;document.getElementById("statActive").textContent=active;document.getElementById("statDisabled").textContent=disabled;document.getElementById("statExpired").textContent=expired}
 function compactDate(value){if(!value)return"Never";const d=new Date(value);if(Number.isNaN(d.getTime()))return value;const yy=String(d.getFullYear()).slice(2);const mm=String(d.getMonth()+1).padStart(2,"0");const dd=String(d.getDate()).padStart(2,"0");const hh=String(d.getHours()).padStart(2,"0");const mi=String(d.getMinutes()).padStart(2,"0");return `${dd}/${mm}/${yy} ${hh}:${mi}`}
-function renderKeys(){const tbody=document.getElementById("keys");const keys=filteredKeys();const frag=document.createDocumentFragment();tbody.innerHTML="";document.getElementById("selectAll").checked=false;document.getElementById("counter").textContent=`${allKeys.length} total, ${keys.length} shown`;updateStats(allKeys);if(keys.length===0){tbody.innerHTML='<tr><td colspan="8"><div class="empty">No licenses found</div></td></tr>';return}for(const item of keys){const tr=document.createElement("tr");const fullHwid=item.hwid||"Not bound";const rawKey=String(item.key||"");const safeKey=escapeHtml(rawKey);const displayKey=escapeHtml(revealKeys?rawKey:maskKey(rawKey));const safeHwid=escapeHtml(fullHwid);const safeOwner=escapeHtml(item.owner&&item.owner.trim()?item.owner:"Not linked");const created=compactDate(item.created_at||item.updated_at||"");const verifyCount=Number(item.verify_count||0);const lastUsed=compactDate(item.last_verified_at);const lastUsedText=lastUsed==="Never"?"Never":lastUsed;const usedSub=verifyCount>0?`${verifyCount} check${verifyCount===1?"":"s"}`:"No usage yet";tr.innerHTML=`<td><input class="check keyCheck" type="checkbox" value="${safeKey}"></td><td><div class="keycell" onmousemove="tooltip(event, revealKeys ? '${safeKey}' : 'Key hidden')" onmouseleave="hideTooltip()"><code>${displayKey}</code><button class="copybtn" onclick="copyKey(event,'${safeKey}')">Copy</button></div><div class="created-note">Created ${escapeHtml(created)}</div></td><td><span class="pill ${statusClass(item.status)}">${escapeHtml(item.status)}</span></td><td>${escapeHtml(item.remaining)}</td><td class="owner" onclick="editOwner(event,'${safeKey}','${escapeHtml(item.owner||"")}')" onmousemove="tooltip(event,'Owner is linked by Discord bot. Click to correct manually if needed')" onmouseleave="hideTooltip()">${safeOwner}</td><td class="hwid" onmousemove="tooltip(event,'${safeHwid}')" onmouseleave="hideTooltip()">${safeHwid}</td><td class="datecell" onmousemove="tooltip(event,'Total successful checks: ${verifyCount}')" onmouseleave="hideTooltip()">${escapeHtml(lastUsedText)}<div class="used-note">${escapeHtml(usedSub)}</div></td><td class="datecell">${escapeHtml(compactDate(item.expires))}</td>`;frag.appendChild(tr)}tbody.appendChild(frag)}
-async function editOwner(event,key,currentOwner){event.stopPropagation();const owner=prompt("Owner",currentOwner||"");if(owner===null)return;const data=await postJSON("/admin/link-owner",{key,owner});if(data.ok){toast("Owner updated");await loadKeys(false)}}
+function renderKeys(){const tbody=document.getElementById("keys");const keys=filteredKeys();const frag=document.createDocumentFragment();tbody.innerHTML="";document.getElementById("selectAll").checked=false;document.getElementById("counter").textContent=`${allKeys.length} total, ${keys.length} shown`;updateStats(allKeys);if(keys.length===0){tbody.innerHTML='<tr><td colspan="8"><div class="empty">No licenses found</div></td></tr>';return}for(const item of keys){const tr=document.createElement("tr");const fullHwid=item.hwid||"Not bound";const rawKey=String(item.key||"");const safeKey=escapeHtml(rawKey);const displayKey=escapeHtml(revealKeys?rawKey:maskKey(rawKey));const safeHwid=escapeHtml(fullHwid);const safeOwner=escapeHtml(item.owner&&item.owner.trim()?item.owner:"Not linked");const created=compactDate(item.created_at||item.updated_at||"");const verifyCount=Number(item.verify_count||0);const lastUsed=compactDate(item.last_verified_at);const lastUsedText=lastUsed==="Never"?"Never":lastUsed;const usedSub=verifyCount>0?`${verifyCount} check${verifyCount===1?"":"s"}`:"No usage yet";tr.innerHTML=`<td><input class="check keyCheck" type="checkbox" value="${safeKey}"></td><td><div class="keycell" onmousemove="tooltip(event, revealKeys ? '${safeKey}' : 'Key hidden')" onmouseleave="hideTooltip()"><div class="key-code-wrap"><code>${displayKey}</code><div class="created-note">Created ${escapeHtml(created)}</div></div><button class="copybtn" onclick="copyKey(event,'${safeKey}')">Copy</button></div></td><td><span class="pill ${statusClass(item.status)}">${escapeHtml(item.status)}</span></td><td>${escapeHtml(item.remaining)}</td><td class="owner" onclick="openOwnerModal(event,'${safeKey}','${escapeHtml(item.owner||"")}')" onmousemove="tooltip(event,'Owner linked by Discord bot. Click only for manual correction')" onmouseleave="hideTooltip()">${safeOwner}</td><td class="hwid" onmousemove="tooltip(event,'${safeHwid}')" onmouseleave="hideTooltip()">${safeHwid}</td><td class="datecell" onmousemove="tooltip(event,'Total successful tracked uses: ${verifyCount}. Updates once every 60 minutes per license.')" onmouseleave="hideTooltip()">${escapeHtml(lastUsedText)}<div class="used-note">${escapeHtml(usedSub)}</div></td><td class="datecell">${escapeHtml(compactDate(item.expires))}</td>`;frag.appendChild(tr)}tbody.appendChild(frag)}
+function openOwnerModal(event,key,currentOwner){event.stopPropagation();pendingOwnerKey=key;const input=document.getElementById("ownerEditInput");input.value=currentOwner||"";document.getElementById("ownerModal").classList.add("show");setTimeout(()=>input.focus(),40)}
+function closeOwnerModal(){document.getElementById("ownerModal").classList.remove("show");pendingOwnerKey=null}
+async function saveOwnerEdit(){if(!pendingOwnerKey)return;const owner=document.getElementById("ownerEditInput").value.trim();const data=await postJSON("/admin/link-owner",{key:pendingOwnerKey,owner});if(data.ok){toast("Owner updated");closeOwnerModal();await loadKeys(false)}}
 async function copyText(text,message){try{await navigator.clipboard.writeText(text);toast(message||"Copied")}catch(e){const temp=document.createElement("textarea");temp.value=text;document.body.appendChild(temp);temp.select();document.execCommand("copy");document.body.removeChild(temp);toast(message||"Copied")}}
 async function copyKey(event,key){event.stopPropagation();await copyText(key,"Key copied")}
-async function loadKeys(showToast=true){if(loading&&showToast)return;const data=await postJSON("/admin/list",{});if(data.ok){allKeys=data.keys||[];renderKeys();if(showToast)toast("Licenses refreshed")}}
+async function loadKeys(showToast=true){if(loading&&showToast)return;const btn=document.getElementById("refreshBtn");if(btn)btn.disabled=true;const data=await postJSON("/admin/list",{});if(data.ok){allKeys=data.keys||[];renderKeys();if(showToast)toast("Licenses refreshed")}if(btn)btn.disabled=false}
 async function logout(){await fetch("/logout",{method:"POST",headers:{"X-CSRF-Token":csrf}});location.href="/admin"}
 loadKeys();
 </script>
