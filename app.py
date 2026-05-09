@@ -261,13 +261,20 @@ def key_status(expires, active):
 
 
 def request_data():
-    """Accept both JSON and form payloads so older Discord bot builds keep working."""
+    """Accept JSON, form-data and query-string payloads so older Discord bot builds keep working."""
+    merged = {}
+
     data = request.get_json(silent=True)
     if isinstance(data, dict):
-        return data
+        merged.update(data)
+
     if request.form:
-        return dict(request.form)
-    return {}
+        merged.update(dict(request.form))
+
+    if request.args:
+        merged.update(dict(request.args))
+
+    return merged
 
 
 def clean_license_key(value):
@@ -279,24 +286,29 @@ def clean_license_key(value):
 
 def check_secret_from_request(data):
     # Backward-compatible admin secret support for Discord bots and automation calls.
-    # Accept the old body field plus common header/token variants.
+    # Accept body, query-string and common header/token variants.
     if not ADMIN_SECRET:
         return False
+
+    auth_header = request.headers.get("Authorization", "").strip()
+    if auth_header.lower().startswith("bearer "):
+        auth_header = auth_header[7:].strip()
 
     candidates = [
         request.headers.get("X-Admin-Secret", ""),
         request.headers.get("X-Admin-Key", ""),
         request.headers.get("X-API-Key", ""),
-        request.headers.get("Authorization", "").replace("Bearer ", "", 1).strip(),
+        auth_header,
         str(data.get("secret", "")),
         str(data.get("ADMIN_SECRET", "")),
         str(data.get("admin_secret", "")),
         str(data.get("adminSecret", "")),
         str(data.get("token", "")),
         str(data.get("api_key", "")),
+        str(data.get("apikey", "")),
     ]
 
-    return any(candidate and secrets.compare_digest(candidate, ADMIN_SECRET) for candidate in candidates)
+    return any(candidate and secrets.compare_digest(str(candidate), ADMIN_SECRET) for candidate in candidates)
 
 
 def admin_authenticated():
@@ -341,8 +353,55 @@ def make_key():
 
 
 def safe_owner(value):
+    """Normalize owner values coming from the panel or Discord bot.
+
+    Accepts a raw Discord ID, a Discord mention like <@123>, or a nested object
+    such as {"id": "123"}. Returns a compact string safe for storage/display.
+    """
+    if isinstance(value, dict):
+        for key in ("id", "user_id", "discord_id", "discordId", "owner"):
+            if value.get(key) is not None:
+                value = value.get(key)
+                break
+
     owner = str(value or "").strip()
+
+    # Discord mention format: <@123> or <@!123>. Store only the numeric ID.
+    mention = re.fullmatch(r"<@!?(\d{5,32})>", owner)
+    if mention:
+        owner = mention.group(1)
+
     return owner[:80]
+
+
+def find_owner_value(data):
+    """Find the Discord owner field without accidentally using unrelated generic IDs."""
+    preferred = [
+        "owner", "user", "discord", "discord_id", "discordId",
+        "discord_user", "discordUser", "discord_user_id", "discordUserId",
+        "discordIdInput", "discord_id_input", "customer", "customer_id",
+        "member", "member_id", "user_id", "userId", "roblox_user",
+    ]
+
+    for name in preferred:
+        value = data.get(name)
+        if value is not None and str(value).strip() != "":
+            return safe_owner(value)
+
+    # Some bots send nested data: {"user": {"id": "..."}} or {"discord": {"id": "..."}}.
+    for name in ("user", "discord", "member", "owner"):
+        value = data.get(name)
+        if isinstance(value, dict):
+            found = safe_owner(value)
+            if found:
+                return found
+
+    # Last-resort compatibility only. Avoid using generic `id` if the payload also
+    # contains likely interaction/message IDs.
+    if data.get("id") and not any(data.get(k) for k in ("interaction_id", "message_id", "guild_id", "channel_id")):
+        return safe_owner(data.get("id"))
+
+    return ""
 
 
 @app.route("/", methods=["GET"])
@@ -585,28 +644,46 @@ def pick_first(data, names):
     return ""
 
 
-@app.route("/admin/link-owner", methods=["POST"])
-@app.route("/admin/link-owner/", methods=["POST"])
-@app.route("/admin/link_owner", methods=["POST"])
-@app.route("/admin/link_owner/", methods=["POST"])
-@app.route("/admin/linkowner", methods=["POST"])
-@app.route("/admin/bind-owner", methods=["POST"])
-@app.route("/admin/bind_owner", methods=["POST"])
+@app.route("/admin/link-owner", methods=["GET", "POST", "PUT", "PATCH"])
+@app.route("/admin/link-owner/", methods=["GET", "POST", "PUT", "PATCH"])
+@app.route("/admin/link_owner", methods=["GET", "POST", "PUT", "PATCH"])
+@app.route("/admin/link_owner/", methods=["GET", "POST", "PUT", "PATCH"])
+@app.route("/admin/linkowner", methods=["GET", "POST", "PUT", "PATCH"])
+@app.route("/admin/bind-owner", methods=["GET", "POST", "PUT", "PATCH"])
+@app.route("/admin/bind_owner", methods=["GET", "POST", "PUT", "PATCH"])
+@app.route("/admin/bind-user", methods=["GET", "POST", "PUT", "PATCH"])
+@app.route("/admin/bind_user", methods=["GET", "POST", "PUT", "PATCH"])
+@app.route("/admin/link-user", methods=["GET", "POST", "PUT", "PATCH"])
+@app.route("/admin/link_user", methods=["GET", "POST", "PUT", "PATCH"])
 @admin_required_json
 def admin_link_owner():
     init_db()
     data = request_data()
 
-    # Keep this endpoint compatible with the old Discord bot payloads.
-    # Supported key fields: key, license_key, license, licenseKey, licenseKeyInput.
-    # Supported owner fields: owner, user, discord_id, discordId, discord_user_id, user_id, id.
-    key = clean_license_key(pick_first(data, ["key", "license_key", "license", "licenseKey", "licenseKeyInput"]))
-    owner = safe_owner(pick_first(data, ["owner", "user", "discord_id", "discordId", "discord_user_id", "discordUserId", "user_id", "userId", "id"]))
+    # Fully backward-compatible Discord owner binding.
+    # Accepts JSON, form-data or query params.
+    key = clean_license_key(pick_first(data, [
+        "key", "license_key", "license", "licenseKey", "licenseKeyInput",
+        "license_key_input", "licenseKeyValue", "licenseCode", "code"
+    ]))
+
+    owner = find_owner_value(data)
 
     if not key:
-        return jsonify({"ok": False, "error": "Missing key"}), 400
+        return jsonify({"ok": False, "error": "Missing key", "received_fields": sorted(list(data.keys()))}), 400
     if len(key) > 80:
         return jsonify({"ok": False, "error": "Invalid key"}), 400
+
+    # Important: do not silently clear owner on bot calls when the owner field is missing.
+    # Manual unlink from the panel can still send clear_owner=true.
+    clear_owner = str(data.get("clear_owner", "")).strip().lower() in {"1", "true", "yes", "clear"}
+    if not owner and not clear_owner:
+        return jsonify({
+            "ok": False,
+            "error": "Missing owner",
+            "hint": "Send owner, user, discord_id, discordId or user_id with the Discord ID.",
+            "received_fields": sorted(list(data.keys()))
+        }), 400
 
     row = db_query("SELECT license_key, owner FROM licenses WHERE license_key=?", (key,), fetchone=True)
     if not row:
@@ -615,15 +692,17 @@ def admin_link_owner():
     updated_at = now_utc().isoformat()
     db_query("UPDATE licenses SET owner=?, updated_at=? WHERE license_key=?", (owner, updated_at, key))
 
-    # Read back from the database so the bot and panel get the same confirmed value.
     updated_row = db_query("SELECT license_key, owner, updated_at FROM licenses WHERE license_key=?", (key,), fetchone=True) or {}
+    saved_owner = updated_row.get("owner") or ""
+
     return jsonify({
         "ok": True,
+        "linked": bool(saved_owner),
         "key": updated_row.get("license_key") or key,
         "license_key": updated_row.get("license_key") or key,
-        "owner": updated_row.get("owner") or "",
-        "user": updated_row.get("owner") or "",
-        "discord_id": updated_row.get("owner") or "",
+        "owner": saved_owner,
+        "user": saved_owner,
+        "discord_id": saved_owner,
         "updated_at": updated_row.get("updated_at") or updated_at,
     })
 
@@ -1069,7 +1148,7 @@ function compactDate(value){if(!value)return"Never";const d=new Date(value);if(N
 function renderKeys(){const tbody=document.getElementById("keys");const keys=filteredKeys();const frag=document.createDocumentFragment();tbody.innerHTML="";document.getElementById("selectAll").checked=false;document.getElementById("counter").textContent=`${allKeys.length} total, ${keys.length} shown`;updateStats(allKeys);if(keys.length===0){tbody.innerHTML='<tr><td colspan="8"><div class="empty">No licenses found</div></td></tr>';return}for(const item of keys){const tr=document.createElement("tr");const fullHwid=item.hwid||"Not bound";const rawKey=String(item.key||"");const safeKey=escapeHtml(rawKey);const displayKey=escapeHtml(revealKeys?rawKey:maskKey(rawKey));const safeHwid=escapeHtml(fullHwid);const safeOwner=escapeHtml(item.owner&&item.owner.trim()?item.owner:"Not linked");const created=compactDate(item.created_at||item.updated_at||"");const verifyCount=Number(item.verify_count||0);const lastUsed=compactDate(item.last_verified_at);const lastUsedText=lastUsed==="Never"?"Never":lastUsed;const usedSub=verifyCount>0?`${verifyCount} check${verifyCount===1?"":"s"}`:"No usage yet";tr.innerHTML=`<td><input class="check keyCheck" type="checkbox" value="${safeKey}"></td><td><div class="keycell" onmousemove="tooltip(event, revealKeys ? '${safeKey}' : 'Key hidden')" onmouseleave="hideTooltip()"><div class="key-code-wrap"><code>${displayKey}</code><div class="created-note">Created ${escapeHtml(created)}</div></div><button class="copybtn" onclick="copyKey(event,'${safeKey}')">Copy</button></div></td><td><span class="pill ${statusClass(item.status)}">${escapeHtml(item.status)}</span></td><td>${escapeHtml(item.remaining)}</td><td class="owner" onclick="openOwnerModal(event,'${safeKey}','${escapeHtml(item.owner||"")}')" onmousemove="tooltip(event,'Owner linked by Discord bot. Click only for manual correction')" onmouseleave="hideTooltip()">${safeOwner}</td><td class="hwid" onmousemove="tooltip(event,'${safeHwid}')" onmouseleave="hideTooltip()">${safeHwid}</td><td class="datecell" onmousemove="tooltip(event,'Total successful tracked uses: ${verifyCount}. Updates once every 60 minutes per license.')" onmouseleave="hideTooltip()">${escapeHtml(lastUsedText)}<div class="used-note">${escapeHtml(usedSub)}</div></td><td class="datecell">${escapeHtml(compactDate(item.expires))}</td>`;frag.appendChild(tr)}tbody.appendChild(frag)}
 function openOwnerModal(event,key,currentOwner){event.stopPropagation();pendingOwnerKey=key;const input=document.getElementById("ownerEditInput");input.value=currentOwner||"";document.getElementById("ownerModal").classList.add("show");setTimeout(()=>input.focus(),40)}
 function closeOwnerModal(){document.getElementById("ownerModal").classList.remove("show");pendingOwnerKey=null}
-async function saveOwnerEdit(){if(!pendingOwnerKey)return;const owner=document.getElementById("ownerEditInput").value.trim();const data=await postJSON("/admin/link-owner",{key:pendingOwnerKey,owner});if(data.ok){toast("Owner updated");closeOwnerModal();await loadKeys(false)}}
+async function saveOwnerEdit(){if(!pendingOwnerKey)return;const owner=document.getElementById("ownerEditInput").value.trim();const payload={key:pendingOwnerKey,owner};if(!owner)payload.clear_owner=true;const data=await postJSON("/admin/link-owner",payload);if(data.ok){toast("Owner updated");closeOwnerModal();await loadKeys(false)}}
 async function copyText(text,message){try{await navigator.clipboard.writeText(text);toast(message||"Copied")}catch(e){const temp=document.createElement("textarea");temp.value=text;document.body.appendChild(temp);temp.select();document.execCommand("copy");document.body.removeChild(temp);toast(message||"Copied")}}
 async function copyKey(event,key){event.stopPropagation();await copyText(key,"Key copied")}
 async function loadKeys(showToast=true){if(loading&&showToast)return;const btn=document.getElementById("refreshBtn");if(btn)btn.disabled=true;const data=await postJSON("/admin/list",{});if(data.ok){allKeys=data.keys||[];renderKeys();if(showToast)toast("Licenses refreshed")}if(btn)btn.disabled=false}
