@@ -609,19 +609,20 @@ def admin_search_owner():
 STYLE = """
 <style>
 :root{
-  --accent:#ff2338;
-  --accent2:#d71328;
-  --bg:#050506;
-  --panel:#0c0c10;
-  --panel2:#111116;
-  --line:rgba(255,255,255,.105);
-  --line2:rgba(255,35,56,.34);
-  --text:#f6f6f8;
-  --muted:#a5a6af;
-  --good:#8effad;
-  --warn:#ffd479;
-  --bad:#ff8c98;
-  --shadow:0 28px 90px rgba(0,0,0,.48);
+  --bg:#030303;
+  --bg2:#090909;
+  --panel:#0d0d0d;
+  --panel2:#141414;
+  --panel3:#1a1a1a;
+  --line:rgba(255,255,255,.16);
+  --line2:rgba(255,255,255,.32);
+  --text:#f4f4f4;
+  --muted:#9b9b9b;
+  --muted2:#717171;
+  --good:#f2f2f2;
+  --warn:#cfcfcf;
+  --bad:#b8b8b8;
+  --shadow:0 30px 90px rgba(0,0,0,.58);
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -631,9 +632,8 @@ body{
   color:var(--text);
   font-family:Inter,Segoe UI,Arial,sans-serif;
   background:
-    radial-gradient(circle at var(--mx,16%) var(--my,11%), rgba(255,35,56,.20), transparent 30%),
-    radial-gradient(circle at 88% 8%, rgba(255,255,255,.07), transparent 26%),
-    linear-gradient(145deg,#030304 0%,#111116 44%,#050506 100%);
+    radial-gradient(circle at var(--mx,18%) var(--my,10%), rgba(255,255,255,.10), transparent 28%),
+    linear-gradient(135deg,#000 0%,#0b0b0b 45%,#020202 100%);
   background-attachment:fixed;
   overflow-x:hidden;
 }
@@ -642,90 +642,91 @@ body::before{
   position:fixed;
   inset:-35%;
   background:
-    linear-gradient(115deg,transparent 0%,rgba(255,255,255,.05) 50%,transparent 56%),
-    radial-gradient(circle at 58% 44%,rgba(255,35,56,.075),transparent 36%);
+    linear-gradient(115deg,transparent 0%,rgba(255,255,255,.055) 48%,transparent 54%),
+    radial-gradient(circle at 72% 22%,rgba(255,255,255,.05),transparent 30%);
   transform:translate3d(calc(var(--px,0)*1px),calc(var(--py,0)*1px),0);
   pointer-events:none;
   z-index:-1;
-  opacity:.8;
+  opacity:.68;
 }
 *::-webkit-scrollbar{width:10px;height:10px}
-*::-webkit-scrollbar-track{background:rgba(255,255,255,.035)}
-*::-webkit-scrollbar-thumb{background:rgba(255,35,56,.44);border-radius:999px;border:2px solid rgba(0,0,0,.28)}
-button,input,select{font-family:inherit}
+*::-webkit-scrollbar-track{background:rgba(255,255,255,.04)}
+*::-webkit-scrollbar-thumb{background:rgba(255,255,255,.42);border:2px solid rgba(0,0,0,.38)}
+button,input,select{font-family:inherit;border-radius:0}
 input,select{
   height:48px;
-  border-radius:10px;
-  border:1px solid rgba(255,255,255,.13);
-  background:rgba(4,4,6,.78);
+  border:1px solid var(--line);
+  background:rgba(4,4,4,.86);
   color:var(--text);
   padding:0 14px;
   outline:none;
-  font-weight:760;
+  font-weight:720;
   font-size:14px;
-  transition:.18s ease;
+  transition:.16s ease;
 }
-input::placeholder{color:#747680}
+input::placeholder{color:#6f6f6f}
 input:focus,select:focus{
-  border-color:rgba(255,35,56,.78);
-  box-shadow:0 0 0 4px rgba(255,35,56,.13);
+  border-color:rgba(255,255,255,.62);
+  box-shadow:0 0 0 3px rgba(255,255,255,.075);
   transform:translateY(-1px);
 }
 button{
   height:48px;
-  border-radius:10px;
-  border:1px solid rgba(255,35,56,.70);
-  background:rgba(255,35,56,.06);
-  color:#fff;
+  border:1px solid rgba(255,255,255,.26);
+  background:rgba(255,255,255,.035);
+  color:#f5f5f5;
   padding:0 16px;
-  font-weight:840;
+  font-weight:820;
   font-size:13px;
   cursor:pointer;
   position:relative;
   overflow:hidden;
-  transition:transform .18s cubic-bezier(.2,.8,.2,1),background .18s ease,box-shadow .18s ease,border-color .18s ease,opacity .18s ease;
+  letter-spacing:.1px;
+  transition:transform .16s cubic-bezier(.2,.8,.2,1),background .16s ease,box-shadow .16s ease,border-color .16s ease,opacity .16s ease;
 }
 button::before{
   content:"";
   position:absolute;
   inset:0;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent);
   transform:translateX(-130%);
   transition:transform .55s ease;
 }
-button:hover{background:rgba(255,35,56,.13);transform:translateY(-2px);box-shadow:0 18px 45px rgba(255,35,56,.13)}
+button:hover{background:rgba(255,255,255,.075);border-color:rgba(255,255,255,.55);transform:translateY(-2px);box-shadow:0 18px 45px rgba(0,0,0,.35)}
 button:hover::before{transform:translateX(130%)}
 button:disabled{opacity:.46;cursor:wait;transform:none}
-.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:rgba(255,68,84,.85);box-shadow:0 18px 54px rgba(255,35,56,.19)}
-.secondary{border-color:rgba(255,255,255,.13);background:rgba(255,255,255,.035);color:var(--text)}
-.danger{border-color:rgba(255,80,96,.58);background:rgba(255,35,56,.08);color:#ffd9de}
+.primary{background:#f2f2f2;border-color:#f2f2f2;color:#070707;box-shadow:0 22px 55px rgba(255,255,255,.08)}
+.primary:hover{background:#fff;color:#000;border-color:#fff;box-shadow:0 24px 60px rgba(255,255,255,.12)}
+.secondary{border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.035);color:var(--text)}
+.danger{border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.02);color:#d7d7d7}
+.danger:hover{border-color:rgba(255,255,255,.65);color:#fff}
 .brand{display:flex;align-items:center;gap:16px}
 .brand-mark{
-  width:64px;height:64px;display:grid;place-items:center;border-radius:18px;
-  background:linear-gradient(145deg,rgba(255,35,56,.24),rgba(255,255,255,.035));
-  border:1px solid rgba(255,255,255,.12);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 22px 50px rgba(0,0,0,.34);
+  width:64px;height:64px;display:grid;place-items:center;border-radius:0;
+  background:linear-gradient(145deg,rgba(255,255,255,.13),rgba(255,255,255,.025));
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 24px 55px rgba(0,0,0,.42);
 }
-.brand-mark img{width:46px;height:46px;object-fit:contain;filter:drop-shadow(0 12px 16px rgba(0,0,0,.36))}
-h1{margin:0;font-size:clamp(34px,3vw,46px);letter-spacing:-.8px;line-height:1}
+.brand-mark img{width:46px;height:46px;object-fit:contain;filter:drop-shadow(0 14px 18px rgba(0,0,0,.42)) grayscale(1) brightness(1.45)}
+h1{margin:0;font-size:clamp(34px,3vw,46px);letter-spacing:-.9px;line-height:1}
 .muted{color:var(--muted);font-size:14px;margin-top:8px;font-weight:650}
 .card{
-  background:linear-gradient(180deg,rgba(18,18,23,.88),rgba(8,8,11,.92));
+  background:linear-gradient(180deg,rgba(18,18,18,.92),rgba(7,7,7,.96));
   border:1px solid var(--line);
-  border-radius:20px;
+  border-radius:0;
   padding:22px;
   box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.045);
   backdrop-filter:blur(18px);
-  transition:transform .22s cubic-bezier(.2,.8,.2,1),border-color .22s ease,box-shadow .22s ease;
+  transition:transform .2s cubic-bezier(.2,.8,.2,1),border-color .2s ease,box-shadow .2s ease;
   position:relative;
   overflow:hidden;
 }
-.card::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at var(--cardx,50%) var(--cardy,0%),rgba(255,35,56,.14),transparent 34%);opacity:0;pointer-events:none;transition:opacity .2s ease}
-.card:hover{transform:translateY(-3px);border-color:rgba(255,35,56,.36);box-shadow:0 34px 105px rgba(0,0,0,.54),0 0 60px rgba(255,35,56,.08)}
+.card::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at var(--cardx,50%) var(--cardy,0%),rgba(255,255,255,.08),transparent 34%);opacity:0;pointer-events:none;transition:opacity .2s ease}
+.card:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.34);box-shadow:0 36px 105px rgba(0,0,0,.60),0 0 60px rgba(255,255,255,.035)}
 .card:hover::after{opacity:1}
-.toast{position:fixed;right:24px;bottom:24px;background:#101014;border:1px solid rgba(255,35,56,.38);border-radius:12px;padding:14px 16px;color:var(--text);font-weight:820;opacity:0;transform:translateY(10px);transition:.18s ease;pointer-events:none;z-index:40;box-shadow:0 22px 60px rgba(0,0,0,.50),0 0 42px rgba(255,35,56,.10)}
+.toast{position:fixed;right:24px;bottom:24px;background:#0f0f0f;border:1px solid rgba(255,255,255,.28);border-radius:0;padding:14px 16px;color:var(--text);font-weight:820;opacity:0;transform:translateY(10px);transition:.18s ease;pointer-events:none;z-index:40;box-shadow:0 22px 60px rgba(0,0,0,.55)}
 .toast.show{opacity:1;transform:translateY(0)}
-.tooltip{position:fixed;max-width:540px;background:#111116;color:var(--text);border:1px solid rgba(255,35,56,.32);border-radius:10px;padding:10px 12px;font-size:12px;font-weight:760;box-shadow:0 20px 60px rgba(0,0,0,.45);opacity:0;pointer-events:none;transform:translateY(6px);transition:opacity .14s ease,transform .14s ease;z-index:50;word-break:break-all}
+.tooltip{position:fixed;max-width:540px;background:#101010;color:var(--text);border:1px solid rgba(255,255,255,.26);border-radius:0;padding:10px 12px;font-size:12px;font-weight:760;box-shadow:0 20px 60px rgba(0,0,0,.45);opacity:0;pointer-events:none;transform:translateY(6px);transition:opacity .14s ease,transform .14s ease;z-index:50;word-break:break-all}
 .tooltip.show{opacity:1;transform:translateY(0)}
 </style>
 """
@@ -741,19 +742,24 @@ LOGIN_HTML = """
 """ + STYLE + """
 <style>
 .login-wrap{min-height:100vh;display:grid;place-items:center;padding:28px}
-.login{width:min(480px,calc(100vw - 34px));animation:loginPop .42s cubic-bezier(.2,.8,.2,1) both}
+.login{width:min(480px,calc(100vw - 34px));animation:loginPop .36s cubic-bezier(.2,.8,.2,1) both;padding:30px}
 @keyframes loginPop{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
-.login .sub{margin-left:80px;margin-bottom:26px}
+.login .brand{justify-content:center;margin-bottom:10px}
+.login .brand-mark{width:62px;height:62px;flex:0 0 auto}
+.login .brand-mark img{width:44px;height:44px}
+.login h1{font-size:38px;line-height:1;white-space:nowrap}
+.login .sub{text-align:center;margin:4px 0 28px;color:#b7b7b7}
 .login input{width:100%}
-label{display:block;margin:15px 0 8px;color:#e3e3e7;font-size:13px;font-weight:820}
-.passbox{position:relative;width:100%}.passbox input{padding-right:108px}.textbtn{position:absolute;right:7px;top:7px;height:34px;padding:0 12px;border-radius:8px;border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.035);font-size:12px;color:#fff}.textbtn:hover{transform:none;background:rgba(255,255,255,.08)}
-.btn{width:100%;margin-top:23px}.err{display:none;margin-top:14px;padding:13px;border-radius:10px;background:rgba(255,35,56,.08);border:1px solid rgba(255,35,56,.32);color:#ffd8dc;font-weight:780;font-size:13px}.secure-note{margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);color:#8f9099;font-size:12px;line-height:1.55;font-weight:650}
+label{display:block;margin:15px 0 8px;color:#dfdfdf;font-size:12px;font-weight:820;text-transform:uppercase;letter-spacing:.55px}
+.passbox{position:relative;width:100%}.passbox input{padding-right:108px}.textbtn{position:absolute;right:7px;top:7px;height:34px;padding:0 12px;border-color:rgba(255,255,255,.14);background:rgba(255,255,255,.035);font-size:12px;color:#fff}.textbtn:hover{transform:none;background:rgba(255,255,255,.08)}
+.btn{width:100%;margin-top:23px}.err{display:none;margin-top:14px;padding:13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.24);color:#fff;font-weight:780;font-size:13px}.secure-note{margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);color:#8f8f8f;font-size:12px;line-height:1.55;font-weight:650;text-align:center}
+@media(max-width:520px){.login .brand{gap:12px}.login h1{font-size:32px}.login .brand-mark{width:54px;height:54px}.login .brand-mark img{width:38px;height:38px}}
 </style>
 </head>
 <body>
 <div class="login-wrap">
   <div class="card login">
-    <div class="brand">
+    <div class="brand login-brand">
       <div class="brand-mark"><img src="/static/Logo%20Bloxsuro.png" alt="BLOXSURO Logo"></div>
       <h1>BLOXSURO</h1>
     </div>
@@ -794,7 +800,7 @@ ADMIN_HTML = """
 <meta name="csrf-token" content="{{ csrf }}">
 """ + STYLE + """
 <style>
-.wrap{width:min(1360px,calc(100vw - 56px));margin:0 auto;padding:46px 0 68px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:24px;animation:fadeDown .36s ease both}@keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}.top-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.badge{border:1px solid rgba(255,35,56,.30);background:rgba(16,16,20,.76);color:#fff;border-radius:12px;padding:12px 16px;font-weight:820;font-size:13px;box-shadow:inset 0 0 30px rgba(255,35,56,.035),0 16px 42px rgba(0,0,0,.18);backdrop-filter:blur(14px)}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:22px}.stat{padding:18px}.stat .num{font-size:28px;font-weight:900;letter-spacing:-.5px}.stat .label{color:var(--muted);font-size:12px;font-weight:760;margin-top:4px}.grid{display:grid;grid-template-columns:340px minmax(0,1fr);gap:22px;align-items:start;animation:fadeUp .42s ease both}@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}h3{margin:0 0 14px;font-size:20px;letter-spacing:-.2px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.field{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}.field label{font-size:12px;color:#d7d7de;font-weight:820}.field input,.field select{width:100%}.stack{display:flex;flex-direction:column;gap:14px}.toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:14px}.tablewrap{overflow-x:auto;max-height:660px;overflow-y:auto;border:1px solid rgba(255,255,255,.10);border-radius:16px;background:rgba(7,7,9,.82);box-shadow:inset 0 0 42px rgba(0,0,0,.22)}table{width:100%;border-collapse:collapse;min-width:1320px;table-layout:auto}th,td{text-align:left;padding:15px 14px;border-bottom:1px solid rgba(255,255,255,.075);font-size:14px;vertical-align:middle;overflow:hidden;text-overflow:ellipsis}th{color:var(--muted);background:rgba(13,13,17,.97);position:sticky;top:0;z-index:2;backdrop-filter:blur(10px);font-size:12px;text-transform:uppercase;letter-spacing:.6px}tr{transition:background .16s ease}tr:hover td{background:rgba(255,35,56,.045)}code{color:#ff5262;font-weight:880;letter-spacing:.2px}.hwid{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c7c7cf}.owner{min-width:190px;width:190px;color:#f5f5f7;font-weight:780;font-family:Consolas,monospace;white-space:nowrap;cursor:pointer}.owner:hover{color:#ff5262}.check{width:18px;height:18px;accent-color:var(--accent);min-width:0}.pill{display:inline-block;border-radius:999px;padding:6px 11px;font-size:12px;font-weight:850;background:#17171b;border:1px solid rgba(255,255,255,.12)}.ok{color:var(--good)}.warn{color:var(--warn)}.bad{color:var(--bad)}.keycell{display:flex;align-items:center;gap:8px}.copybtn{height:30px;padding:0 10px;border-radius:8px;font-size:11px;color:var(--text);border-color:rgba(255,255,255,.13);background:#111116}.copybtn:hover{border-color:rgba(255,35,56,.7);color:#fff}.small{height:40px;font-size:12px}.logout{color:var(--text);border-color:rgba(255,255,255,.14)}.split{display:grid;grid-template-columns:1fr 1fr;gap:10px}.help{font-size:12px;line-height:1.5;color:#8d8e98;font-weight:650;margin-top:4px}.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.62);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:60;padding:22px}.modal-backdrop.show{display:flex}.modal{width:min(520px,100%);animation:modalPop .22s ease both}@keyframes modalPop{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}.progress{height:3px;background:rgba(255,255,255,.08);overflow:hidden;border-radius:999px;margin-top:14px}.progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),#fff);transition:width .24s ease}.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;background:currentColor;margin-right:7px}.datecell{color:#b8b9c2;font-size:12px}.empty{padding:28px;text-align:center;color:var(--muted);font-weight:760}@media(max-width:1050px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.wrap{width:min(100% - 32px,840px);padding:28px 0 44px}.topbar{align-items:flex-start;flex-direction:column}input,select{width:100%}.row{width:100%}.split{grid-template-columns:1fr}}@media(max-width:560px){.stats{grid-template-columns:1fr}.top-actions{width:100%}.top-actions>*{flex:1}.brand-mark{width:56px;height:56px}.brand-mark img{width:38px;height:38px}}
+.wrap{width:min(1420px,calc(100vw - 56px));margin:0 auto;padding:46px 0 68px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:24px;animation:fadeDown .34s ease both}@keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}.top-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.badge{border:1px solid rgba(255,255,255,.18);background:rgba(16,16,16,.78);color:#fff;border-radius:0;padding:12px 16px;font-weight:820;font-size:13px;box-shadow:inset 0 0 30px rgba(255,255,255,.025),0 16px 42px rgba(0,0,0,.18);backdrop-filter:blur(14px)}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:22px}.stat{padding:18px}.stat .num{font-size:28px;font-weight:900;letter-spacing:-.5px}.stat .label{color:var(--muted);font-size:12px;font-weight:760;margin-top:4px;text-transform:uppercase;letter-spacing:.55px}.grid{display:grid;grid-template-columns:360px minmax(0,1fr);gap:22px;align-items:start;animation:fadeUp .4s ease both}@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}h3{margin:0 0 16px;font-size:20px;letter-spacing:-.2px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.field{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}.field label{font-size:12px;color:#d7d7d7;font-weight:820;text-transform:uppercase;letter-spacing:.5px}.field input,.field select{width:100%}.stack{display:flex;flex-direction:column;gap:16px}.toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:16px}.toolbar .row:first-child{flex:1}.toolbar input{min-width:300px;flex:1}.tablewrap{overflow-x:auto;max-height:660px;overflow-y:auto;border:1px solid rgba(255,255,255,.12);border-radius:0;background:rgba(7,7,7,.84);box-shadow:inset 0 0 42px rgba(0,0,0,.22)}table{width:100%;border-collapse:collapse;min-width:1240px;table-layout:auto}th,td{text-align:left;padding:15px 14px;border-bottom:1px solid rgba(255,255,255,.075);font-size:14px;vertical-align:middle;overflow:hidden;text-overflow:ellipsis}th{color:var(--muted);background:rgba(13,13,13,.98);position:sticky;top:0;z-index:2;backdrop-filter:blur(10px);font-size:12px;text-transform:uppercase;letter-spacing:.6px}tr{transition:background .16s ease}tr:hover td{background:rgba(255,255,255,.04)}code{color:#f2f2f2;font-weight:880;letter-spacing:.2px}.hwid{max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c7c7c7}.owner{min-width:180px;width:180px;color:#f5f5f5;font-weight:780;font-family:Consolas,monospace;white-space:nowrap;cursor:pointer}.owner:hover{color:#fff;text-decoration:underline}.check{width:18px;height:18px;accent-color:#f2f2f2;min-width:0}.pill{display:inline-block;border-radius:0;padding:6px 11px;font-size:12px;font-weight:850;background:#171717;border:1px solid rgba(255,255,255,.13)}.ok{color:#fff}.warn{color:#cfcfcf}.bad{color:#a9a9a9}.keycell{display:flex;align-items:center;gap:8px}.copybtn{height:30px;padding:0 10px;border-radius:0;font-size:11px;color:var(--text);border-color:rgba(255,255,255,.14);background:#111}.copybtn:hover{border-color:rgba(255,255,255,.56);color:#fff}.small{height:40px;font-size:12px}.logout{color:var(--text);border-color:rgba(255,255,255,.14)}.action-grid{display:grid;grid-template-columns:1fr;gap:10px}.action-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.help{font-size:12px;line-height:1.55;color:#8f8f8f;font-weight:650;margin-top:12px}.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.68);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:60;padding:22px}.modal-backdrop.show{display:flex}.modal{width:min(520px,100%);animation:modalPop .2s ease both}@keyframes modalPop{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}.progress{height:3px;background:rgba(255,255,255,.08);overflow:hidden;border-radius:0;margin-top:14px}.progress span{display:block;height:100%;width:0;background:#fff;transition:width .24s ease}.datecell{color:#b8b8b8;font-size:12px}.empty{padding:28px;text-align:center;color:var(--muted);font-weight:760}@media(max-width:1120px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.wrap{width:min(100% - 32px,900px);padding:28px 0 44px}.topbar{align-items:flex-start;flex-direction:column}input,select{width:100%}.row{width:100%}.toolbar input{min-width:0}.action-row{grid-template-columns:1fr 1fr}}@media(max-width:560px){.stats{grid-template-columns:1fr}.top-actions{width:100%}.top-actions>*{flex:1}.brand-mark{width:56px;height:56px}.brand-mark img{width:38px;height:38px}.action-row{grid-template-columns:1fr}.toolbar .row{flex-direction:column;align-items:stretch}}
 </style>
 </head>
 <body>
@@ -824,24 +830,25 @@ ADMIN_HTML = """
   <div class="grid">
     <div class="stack">
       <div class="card">
-        <h3>Create Key</h3>
+        <h3>Create License</h3>
         <div class="field"><label>Owner</label><input id="owner" placeholder="Customer or Discord username" maxlength="80"></div>
         <div class="field"><label>Duration</label><input id="duration" value="30d" placeholder="15m, 1h, 7d, 30d"></div>
-        <button id="createBtn" class="primary" onclick="createKey()">Create Key</button>
+        <button id="createBtn" class="primary" style="width:100%" onclick="createKey()">Create License</button>
         <div class="help">Accepted units: minutes, hours and days. Examples: 15m, 1h, 7d, 30d.</div>
       </div>
 
       <div class="card">
-        <h3>Bulk Actions</h3>
-        <div class="field"><label>Re-enable duration</label><input id="reenableDuration" value="30d" placeholder="1h, 7d, 30d"></div>
-        <div class="split">
-          <button onclick="bulkAction('enable_duration')">Re-enable with Time</button>
-          <button onclick="bulkAction('enable')">Re-enable Only</button>
-          <button onclick="bulkAction('reset_hwid')">Reset HWID</button>
-          <button onclick="bulkAction('disable')">Disable</button>
+        <h3>Selected License Operations</h3>
+        <div class="field"><label>Renewal Duration</label><input id="reenableDuration" value="30d" placeholder="1h, 7d, 30d"></div>
+        <div class="action-grid">
+          <button class="primary" onclick="bulkAction('enable_duration')">Renew Access</button>
+          <div class="action-row">
+            <button onclick="bulkAction('reset_hwid')">Reset HWID</button>
+            <button onclick="bulkAction('disable')">Disable Access</button>
+          </div>
+          <button class="danger" onclick="bulkAction('delete')">Delete Selected</button>
         </div>
-        <button class="danger" style="width:100%;margin-top:10px" onclick="bulkAction('delete')">Delete Selected</button>
-        <div class="help">Re-enable with time activates selected keys and replaces their expiration with the duration chosen above.</div>
+        <div class="help">Renew Access activates selected licenses and replaces the expiration with the duration above.</div>
       </div>
 
       <div class="card">
@@ -852,7 +859,7 @@ ADMIN_HTML = """
 
     <div>
       <div class="card">
-        <h3>Keys</h3>
+        <h3>Licenses</h3>
         <div class="toolbar">
           <div class="row">
             <input id="search" placeholder="Search key, owner or HWID" oninput="debouncedRender()">
@@ -909,27 +916,27 @@ function toast(message){const el=document.getElementById("toast");el.textContent
 function tooltip(event,text){const el=document.getElementById("tooltip");el.textContent=text||"";el.style.left=Math.min(event.clientX+14,window.innerWidth-540)+"px";el.style.top=(event.clientY+16)+"px";el.classList.add("show")}
 function hideTooltip(){document.getElementById("tooltip").classList.remove("show")}
 async function postJSON(url,payload){const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","X-CSRF-Token":csrf},body:JSON.stringify(payload||{})});if(res.status===401){location.href="/admin";return{ok:false,error:"Unauthorized"}}let data={};try{data=await res.json()}catch(e){data={ok:false,error:"Invalid server response"}}if(!data.ok&&data.error)toast(data.error);return data}
-async function createKey(){if(loading)return;const btn=document.getElementById("createBtn");const duration=document.getElementById("duration").value.trim();const owner=document.getElementById("owner").value.trim();loading=true;btn.disabled=true;setProgress(35);const data=await postJSON("/admin/create",{duration,owner});setProgress(75);if(data.ok){toast("Key created");await loadKeys(false);if(data.key)copyText(data.key,"Created key copied")}setProgress(100);setTimeout(()=>setProgress(0),420);btn.disabled=false;loading=false}
+async function createKey(){if(loading)return;const btn=document.getElementById("createBtn");const duration=document.getElementById("duration").value.trim();const owner=document.getElementById("owner").value.trim();loading=true;btn.disabled=true;setProgress(35);const data=await postJSON("/admin/create",{duration,owner});setProgress(75);if(data.ok){toast("License created");await loadKeys(false);if(data.key)copyText(data.key,"Created key copied")}setProgress(100);setTimeout(()=>setProgress(0),420);btn.disabled=false;loading=false}
 function selectedKeys(){return Array.from(document.querySelectorAll(".keyCheck:checked")).map(x=>x.value)}
-function actionLabel(action){return {enable_duration:"Re-enable with time",enable:"Re-enable only",disable:"Disable",reset_hwid:"Reset HWID",delete:"Delete"}[action]||action}
-function bulkAction(action){const keys=selectedKeys();if(keys.length===0){toast("No keys selected");return}const duration=document.getElementById("reenableDuration").value.trim();let text=`${actionLabel(action)} will affect ${keys.length} selected key(s).`;if(action==="enable_duration")text+=` New duration: ${duration}.`;if(action==="delete")text+=" This cannot be undone.";pendingAction={action,keys,duration};document.getElementById("modalTitle").textContent=actionLabel(action);document.getElementById("modalText").textContent=text;document.getElementById("modalConfirm").onclick=confirmPendingAction;document.getElementById("confirmModal").classList.add("show")}
+function actionLabel(action){return {enable_duration:"Renew Access",disable:"Disable Access",reset_hwid:"Reset HWID",delete:"Delete Selected"}[action]||action}
+function bulkAction(action){const keys=selectedKeys();if(keys.length===0){toast("No keys selected");return}const duration=document.getElementById("reenableDuration").value.trim();let text=`${actionLabel(action)} will affect ${keys.length} selected license(s).`;if(action==="enable_duration")text+=` New duration: ${duration}.`;if(action==="delete")text+=" This cannot be undone.";pendingAction={action,keys,duration};document.getElementById("modalTitle").textContent=actionLabel(action);document.getElementById("modalText").textContent=text;document.getElementById("modalConfirm").onclick=confirmPendingAction;document.getElementById("confirmModal").classList.add("show")}
 function closeModal(){document.getElementById("confirmModal").classList.remove("show");pendingAction=null;setProgress(0)}
 function setProgress(v){const el=document.getElementById("modalProgress");if(el)el.style.width=v+"%"}
-async function confirmPendingAction(){if(!pendingAction||loading)return;loading=true;setProgress(30);const data=await postJSON("/admin/action",pendingAction);setProgress(78);if(data.ok){toast(`${data.changed} key(s) updated`);await loadKeys(false)}setProgress(100);setTimeout(closeModal,280);loading=false}
+async function confirmPendingAction(){if(!pendingAction||loading)return;loading=true;setProgress(30);const data=await postJSON("/admin/action",pendingAction);setProgress(78);if(data.ok){toast(`${data.changed} license(s) updated`);await loadKeys(false)}setProgress(100);setTimeout(closeModal,280);loading=false}
 function toggleAll(){const checked=document.getElementById("selectAll").checked;document.querySelectorAll(".keyCheck").forEach(cb=>cb.checked=checked)}
 function statusClass(status){if(status==="Active")return"ok";if(status==="Expired")return"warn";return"bad"}
 function filteredKeys(){const q=document.getElementById("search").value.toLowerCase().trim();const f=document.getElementById("filter").value;return allKeys.filter(item=>{const hay=`${item.key} ${item.hwid||""} ${item.owner||""} ${item.status}`.toLowerCase();if(q&&!hay.includes(q))return false;if(f==="active"&&item.status!=="Active")return false;if(f==="disabled"&&item.status!=="Disabled")return false;if(f==="expired"&&item.status!=="Expired")return false;if(f==="bound"&&!item.hwid)return false;if(f==="unbound"&&item.hwid)return false;return true})}
 function debouncedRender(){clearTimeout(renderTimer);renderTimer=setTimeout(renderKeys,80)}
 function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[s]))}
-function maskKey(key){const raw=String(key||"");if(raw.length<=10)return "Hidden";return raw.slice(0,5)+"••••••••"+raw.slice(-4)}
+function maskKey(key){const raw=String(key||"");if(raw.length<=10)return "REDACTED";return raw.slice(0,5)+" REDACTED "+raw.slice(-4)}
 function toggleRevealKeys(){revealKeys=!revealKeys;document.getElementById("revealBtn").textContent=revealKeys?"Hide Keys":"Show Keys";renderKeys()}
 function clearFilters(){document.getElementById("search").value="";document.getElementById("filter").value="all";renderKeys()}
 function updateStats(keys){const total=keys.length;const active=keys.filter(k=>k.status==="Active").length;const disabled=keys.filter(k=>k.status==="Disabled").length;const expired=keys.filter(k=>k.status==="Expired").length;document.getElementById("statTotal").textContent=total;document.getElementById("statActive").textContent=active;document.getElementById("statDisabled").textContent=disabled;document.getElementById("statExpired").textContent=expired}
-function renderKeys(){const tbody=document.getElementById("keys");const keys=filteredKeys();const frag=document.createDocumentFragment();tbody.innerHTML="";document.getElementById("selectAll").checked=false;document.getElementById("counter").textContent=`${allKeys.length} total / ${keys.length} shown`;updateStats(allKeys);if(keys.length===0){tbody.innerHTML='<tr><td colspan="10"><div class="empty">No keys found</div></td></tr>';return}for(const item of keys){const tr=document.createElement("tr");const fullHwid=item.hwid||"Not bound";const rawKey=String(item.key||"");const safeKey=escapeHtml(rawKey);const displayKey=escapeHtml(revealKeys?rawKey:maskKey(rawKey));const safeHwid=escapeHtml(fullHwid);const safeOwner=escapeHtml(item.owner&&item.owner.trim()?item.owner:"Not linked");tr.innerHTML=`<td><input class="check keyCheck" type="checkbox" value="${safeKey}"></td><td><div class="keycell" onmousemove="tooltip(event, revealKeys ? '${safeKey}' : 'Key hidden')" onmouseleave="hideTooltip()"><code>${displayKey}</code><button class="copybtn" onclick="copyKey(event,'${safeKey}')">Copy</button></div></td><td><span class="pill ${statusClass(item.status)}"><span class="status-dot"></span>${escapeHtml(item.status)}</span></td><td>${escapeHtml(item.remaining)}</td><td class="owner" onclick="editOwner(event,'${safeKey}','${escapeHtml(item.owner||"")}')" onmousemove="tooltip(event,'Click to edit owner')" onmouseleave="hideTooltip()">${safeOwner}</td><td class="hwid" onmousemove="tooltip(event,'${safeHwid}')" onmouseleave="hideTooltip()">${safeHwid}</td><td>${escapeHtml(item.verify_count||0)}</td><td class="datecell">${escapeHtml(item.last_verified_at||"Never")}</td><td class="datecell">${escapeHtml(item.expires)}</td><td class="datecell">${escapeHtml(item.updated_at||"")}</td>`;frag.appendChild(tr)}tbody.appendChild(frag)}
+function renderKeys(){const tbody=document.getElementById("keys");const keys=filteredKeys();const frag=document.createDocumentFragment();tbody.innerHTML="";document.getElementById("selectAll").checked=false;document.getElementById("counter").textContent=`${allKeys.length} total, ${keys.length} shown`;updateStats(allKeys);if(keys.length===0){tbody.innerHTML='<tr><td colspan="10"><div class="empty">No licenses found</div></td></tr>';return}for(const item of keys){const tr=document.createElement("tr");const fullHwid=item.hwid||"Not bound";const rawKey=String(item.key||"");const safeKey=escapeHtml(rawKey);const displayKey=escapeHtml(revealKeys?rawKey:maskKey(rawKey));const safeHwid=escapeHtml(fullHwid);const safeOwner=escapeHtml(item.owner&&item.owner.trim()?item.owner:"Not linked");tr.innerHTML=`<td><input class="check keyCheck" type="checkbox" value="${safeKey}"></td><td><div class="keycell" onmousemove="tooltip(event, revealKeys ? '${safeKey}' : 'Key hidden')" onmouseleave="hideTooltip()"><code>${displayKey}</code><button class="copybtn" onclick="copyKey(event,'${safeKey}')">Copy</button></div></td><td><span class="pill ${statusClass(item.status)}">${escapeHtml(item.status)}</span></td><td>${escapeHtml(item.remaining)}</td><td class="owner" onclick="editOwner(event,'${safeKey}','${escapeHtml(item.owner||"")}')" onmousemove="tooltip(event,'Click to edit owner')" onmouseleave="hideTooltip()">${safeOwner}</td><td class="hwid" onmousemove="tooltip(event,'${safeHwid}')" onmouseleave="hideTooltip()">${safeHwid}</td><td>${escapeHtml(item.verify_count||0)}</td><td class="datecell">${escapeHtml(item.last_verified_at||"Never")}</td><td class="datecell">${escapeHtml(item.expires)}</td><td class="datecell">${escapeHtml(item.updated_at||"")}</td>`;frag.appendChild(tr)}tbody.appendChild(frag)}
 async function editOwner(event,key,currentOwner){event.stopPropagation();const owner=prompt("Owner",currentOwner||"");if(owner===null)return;const data=await postJSON("/admin/link-owner",{key,owner});if(data.ok){toast("Owner updated");await loadKeys(false)}}
 async function copyText(text,message){try{await navigator.clipboard.writeText(text);toast(message||"Copied")}catch(e){const temp=document.createElement("textarea");temp.value=text;document.body.appendChild(temp);temp.select();document.execCommand("copy");document.body.removeChild(temp);toast(message||"Copied")}}
 async function copyKey(event,key){event.stopPropagation();await copyText(key,"Key copied")}
-async function loadKeys(showToast=true){if(loading&&showToast)return;const data=await postJSON("/admin/list",{});if(data.ok){allKeys=data.keys||[];renderKeys();if(showToast)toast("Keys refreshed")}}
+async function loadKeys(showToast=true){if(loading&&showToast)return;const data=await postJSON("/admin/list",{});if(data.ok){allKeys=data.keys||[];renderKeys();if(showToast)toast("Licenses refreshed")}}
 async function logout(){await fetch("/logout",{method:"POST",headers:{"X-CSRF-Token":csrf}});location.href="/admin"}
 loadKeys();
 </script>
