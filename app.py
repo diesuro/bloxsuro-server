@@ -409,6 +409,12 @@ def home():
     return redirect(url_for("admin_panel"))
 
 
+@app.route("/health", methods=["GET"])
+def health():
+    init_db()
+    return jsonify({"ok": True, "online": True, "service": "BLOXSURO License Server", "db_mode": DB_MODE or ("postgres" if using_postgres() else "sqlite")})
+
+
 @app.route("/verify", methods=["POST"])
 def verify():
     init_db()
@@ -571,6 +577,10 @@ def admin_action():
 
     if not keys:
         return jsonify({"ok": False, "error": "No keys selected"}), 400
+
+    # Backward-compatible aliases used by older bot builds.
+    if action in {"renew", "enable_with_time", "reenable_with_time", "re_enable_with_time"}:
+        action = "enable_duration"
 
     allowed = {"disable", "enable", "enable_duration", "reset_hwid", "delete"}
     if action not in allowed:
@@ -754,13 +764,13 @@ def admin_search_owner():
 
     if using_postgres():
         rows = db_query(
-            "SELECT license_key, expires, hwid, active, owner FROM licenses WHERE owner ILIKE ? ORDER BY COALESCE(created_at, updated_at, expires) DESC",
+            "SELECT license_key, expires, hwid, active, owner, created_at, updated_at, last_verified_at, verify_count FROM licenses WHERE owner ILIKE ? ORDER BY COALESCE(created_at, updated_at, expires) DESC",
             (f"%{owner}%",),
             fetchall=True,
         ) or []
     else:
         rows = db_query(
-            "SELECT license_key, expires, hwid, active, owner FROM licenses WHERE lower(owner) LIKE lower(?) ORDER BY COALESCE(created_at, updated_at, expires) DESC",
+            "SELECT license_key, expires, hwid, active, owner, created_at, updated_at, last_verified_at, verify_count FROM licenses WHERE lower(owner) LIKE lower(?) ORDER BY COALESCE(created_at, updated_at, expires) DESC",
             (f"%{owner}%",),
             fetchall=True,
         ) or []
@@ -775,6 +785,11 @@ def admin_search_owner():
             "owner": row.get("owner") or "",
             "active": bool(row.get("active")),
             "status": key_status(row["expires"], bool(row.get("active"))),
+            "created_at": row.get("created_at") or "",
+            "updated_at": row.get("updated_at") or "",
+            "last_verified_at": row.get("last_verified_at") or "",
+            "last_used": row.get("last_verified_at") or "",
+            "verify_count": int(row.get("verify_count") or 0),
         })
 
     return jsonify({"ok": True, "count": len(keys), "keys": keys})
