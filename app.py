@@ -289,12 +289,17 @@ def admin_required_json(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         data = request.get_json(silent=True) or {}
+
+        # Backward compatibility for Discord bot / automation calls:
+        # if ADMIN_SECRET is provided, bypass CSRF even if a browser session cookie exists.
+        if check_secret_from_request(data):
+            return fn(*args, **kwargs)
+
         if admin_authenticated():
             if not csrf_valid(data):
                 return jsonify({"ok": False, "error": "Security token expired. Refresh the panel and try again."}), 403
             return fn(*args, **kwargs)
-        if check_secret_from_request(data):
-            return fn(*args, **kwargs)
+
         return jsonify({"ok": False, "error": "Unauthorized"}), 401
     return wrapper
 
@@ -540,23 +545,38 @@ def admin_list():
     return jsonify({"ok": True, "count": len(keys), "keys": keys})
 
 
+def pick_first(data, names):
+    for name in names:
+        value = data.get(name)
+        if value is not None and str(value).strip() != "":
+            return str(value).strip()
+    return ""
+
+
 @app.route("/admin/link-owner", methods=["POST"])
+@app.route("/admin/link_owner", methods=["POST"])
 @admin_required_json
 def admin_link_owner():
     init_db()
     data = request.get_json(silent=True) or {}
-    key = str(data.get("key", "")).strip()
-    owner = safe_owner(data.get("owner", "") or data.get("user", ""))
+
+    # Keep this endpoint compatible with the old Discord bot payloads.
+    # Supported key fields: key, license_key, license, licenseKey.
+    # Supported owner fields: owner, user, discord_id, discordId, discord_user_id, user_id, id.
+    key = pick_first(data, ["key", "license_key", "license", "licenseKey"])
+    owner = safe_owner(pick_first(data, ["owner", "user", "discord_id", "discordId", "discord_user_id", "user_id", "id"]))
 
     if not key:
         return jsonify({"ok": False, "error": "Missing key"}), 400
+    if len(key) > 80:
+        return jsonify({"ok": False, "error": "Invalid key"}), 400
 
     row = db_query("SELECT license_key FROM licenses WHERE license_key=?", (key,), fetchone=True)
     if not row:
         return jsonify({"ok": False, "error": "Key not found"}), 404
 
     db_query("UPDATE licenses SET owner=?, updated_at=? WHERE license_key=?", (owner, now_utc().isoformat(), key))
-    return jsonify({"ok": True, "key": key, "owner": owner})
+    return jsonify({"ok": True, "key": key, "license_key": key, "owner": owner, "user": owner})
 
 
 @app.route("/admin/key-info", methods=["POST"])
