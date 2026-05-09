@@ -260,11 +260,43 @@ def key_status(expires, active):
     return "Active"
 
 
+def request_data():
+    """Accept both JSON and form payloads so older Discord bot builds keep working."""
+    data = request.get_json(silent=True)
+    if isinstance(data, dict):
+        return data
+    if request.form:
+        return dict(request.form)
+    return {}
+
+
+def clean_license_key(value):
+    """Normalize keys sent by Discord bots or copied from chat messages."""
+    raw = str(value or "").strip()
+    raw = raw.replace(" ", "").replace("\n", "").replace("\r", "").replace("\t", "")
+    return raw.upper()[:80]
+
+
 def check_secret_from_request(data):
-    # Backward-compatible admin secret support, now accepted through header first.
-    header_secret = request.headers.get("X-Admin-Secret", "")
-    body_secret = str(data.get("secret", ""))
-    return ADMIN_SECRET and (secrets.compare_digest(header_secret, ADMIN_SECRET) or secrets.compare_digest(body_secret, ADMIN_SECRET))
+    # Backward-compatible admin secret support for Discord bots and automation calls.
+    # Accept the old body field plus common header/token variants.
+    if not ADMIN_SECRET:
+        return False
+
+    candidates = [
+        request.headers.get("X-Admin-Secret", ""),
+        request.headers.get("X-Admin-Key", ""),
+        request.headers.get("X-API-Key", ""),
+        request.headers.get("Authorization", "").replace("Bearer ", "", 1).strip(),
+        str(data.get("secret", "")),
+        str(data.get("ADMIN_SECRET", "")),
+        str(data.get("admin_secret", "")),
+        str(data.get("adminSecret", "")),
+        str(data.get("token", "")),
+        str(data.get("api_key", "")),
+    ]
+
+    return any(candidate and secrets.compare_digest(candidate, ADMIN_SECRET) for candidate in candidates)
 
 
 def admin_authenticated():
@@ -288,7 +320,7 @@ def csrf_valid(data):
 def admin_required_json(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        data = request.get_json(silent=True) or {}
+        data = request_data()
 
         # Backward compatibility for Discord bot / automation calls:
         # if ADMIN_SECRET is provided, bypass CSRF even if a browser session cookie exists.
@@ -324,8 +356,8 @@ def verify():
     if not rate_limit("verify", 90, 60):
         return jsonify({"valid": False, "reason": "Too many requests"}), 429
 
-    data = request.get_json(silent=True) or {}
-    key = str(data.get("key", "")).strip()
+    data = request_data()
+    key = clean_license_key(data.get("key", ""))
     hwid = str(data.get("hwid", "")).strip()
 
     # Last Used is tracked only by the server.
@@ -411,7 +443,7 @@ def login():
     if not rate_limit("login", 8, 300):
         return jsonify({"ok": False, "error": "Too many login attempts. Try again later."}), 429
 
-    data = request.get_json(silent=True) or {}
+    data = request_data()
     username = str(data.get("username", "")).strip()
     password = str(data.get("password", ""))
 
@@ -444,7 +476,7 @@ def admin_create():
     if not rate_limit("admin_create", 45, 60):
         return jsonify({"ok": False, "error": "Too many create requests"}), 429
 
-    data = request.get_json(silent=True) or {}
+    data = request_data()
     duration = str(data.get("duration", "30d")).strip().lower()
     delta = parse_duration(duration)
 
@@ -468,7 +500,7 @@ def admin_create():
 @admin_required_json
 def admin_action():
     init_db()
-    data = request.get_json(silent=True) or {}
+    data = request_data()
     action = str(data.get("action", "")).strip().lower()
     keys = data.get("keys", [])
     duration = str(data.get("duration", "")).strip().lower()
@@ -554,37 +586,54 @@ def pick_first(data, names):
 
 
 @app.route("/admin/link-owner", methods=["POST"])
+@app.route("/admin/link-owner/", methods=["POST"])
 @app.route("/admin/link_owner", methods=["POST"])
+@app.route("/admin/link_owner/", methods=["POST"])
+@app.route("/admin/linkowner", methods=["POST"])
+@app.route("/admin/bind-owner", methods=["POST"])
+@app.route("/admin/bind_owner", methods=["POST"])
 @admin_required_json
 def admin_link_owner():
     init_db()
-    data = request.get_json(silent=True) or {}
+    data = request_data()
 
     # Keep this endpoint compatible with the old Discord bot payloads.
-    # Supported key fields: key, license_key, license, licenseKey.
+    # Supported key fields: key, license_key, license, licenseKey, licenseKeyInput.
     # Supported owner fields: owner, user, discord_id, discordId, discord_user_id, user_id, id.
-    key = pick_first(data, ["key", "license_key", "license", "licenseKey"])
-    owner = safe_owner(pick_first(data, ["owner", "user", "discord_id", "discordId", "discord_user_id", "user_id", "id"]))
+    key = clean_license_key(pick_first(data, ["key", "license_key", "license", "licenseKey", "licenseKeyInput"]))
+    owner = safe_owner(pick_first(data, ["owner", "user", "discord_id", "discordId", "discord_user_id", "discordUserId", "user_id", "userId", "id"]))
 
     if not key:
         return jsonify({"ok": False, "error": "Missing key"}), 400
     if len(key) > 80:
         return jsonify({"ok": False, "error": "Invalid key"}), 400
 
-    row = db_query("SELECT license_key FROM licenses WHERE license_key=?", (key,), fetchone=True)
+    row = db_query("SELECT license_key, owner FROM licenses WHERE license_key=?", (key,), fetchone=True)
     if not row:
-        return jsonify({"ok": False, "error": "Key not found"}), 404
+        return jsonify({"ok": False, "error": "Key not found", "key": key, "license_key": key}), 404
 
-    db_query("UPDATE licenses SET owner=?, updated_at=? WHERE license_key=?", (owner, now_utc().isoformat(), key))
-    return jsonify({"ok": True, "key": key, "license_key": key, "owner": owner, "user": owner})
+    updated_at = now_utc().isoformat()
+    db_query("UPDATE licenses SET owner=?, updated_at=? WHERE license_key=?", (owner, updated_at, key))
+
+    # Read back from the database so the bot and panel get the same confirmed value.
+    updated_row = db_query("SELECT license_key, owner, updated_at FROM licenses WHERE license_key=?", (key,), fetchone=True) or {}
+    return jsonify({
+        "ok": True,
+        "key": updated_row.get("license_key") or key,
+        "license_key": updated_row.get("license_key") or key,
+        "owner": updated_row.get("owner") or "",
+        "user": updated_row.get("owner") or "",
+        "discord_id": updated_row.get("owner") or "",
+        "updated_at": updated_row.get("updated_at") or updated_at,
+    })
 
 
 @app.route("/admin/key-info", methods=["POST"])
 @admin_required_json
 def admin_key_info():
     init_db()
-    data = request.get_json(silent=True) or {}
-    key = str(data.get("key", "")).strip()
+    data = request_data()
+    key = clean_license_key(data.get("key", ""))
 
     if not key:
         return jsonify({"ok": False, "error": "Missing key"}), 400
@@ -618,8 +667,8 @@ def admin_key_info():
 @admin_required_json
 def admin_search_owner():
     init_db()
-    data = request.get_json(silent=True) or {}
-    owner = safe_owner(data.get("owner", "") or data.get("user", ""))
+    data = request_data()
+    owner = safe_owner(pick_first(data, ["owner", "user", "discord_id", "discordId", "discord_user_id", "user_id", "id"]))
 
     if not owner:
         return jsonify({"ok": False, "error": "Missing owner"}), 400
